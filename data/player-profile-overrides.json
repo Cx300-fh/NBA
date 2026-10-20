@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "profiles": {
+    "893": {
+      "birthPlace": "Brooklyn",
+      "birthPlaceDetails": {
+        "city": "Brooklyn",
+        "state": null,
+        "country": null
+      },
+      "url": "https://www.nba.com/history/legends/profiles/michael-jordan",
+      "source": "NBA.com",
+      "verifiedAt": "2026-10-20T14:24:37.228609+00:00"
+    },
+    "76003": {
+      "birthPlace": "New York City",
+      "birthPlaceDetails": {
+        "city": "New York City",
+        "state": null,
+        "country": null
+      },
+      "url": "https://www.nba.com/history/legends/profiles/kareem-abdul-jabbar",
+      "source": "NBA.com",
+      "verifiedAt": "2026-10-20T14:24:37.228609+00:00"
+    },
+    "78049": {
+      "birthPlace": "Monroe, Louisiana",
+      "birthPlaceDetails": {
+        "city": "Monroe",
+        "state": "Louisiana",
+        "country": null
+      },
+      "url": "https://www.nba.com/history/legends/profiles/bill-russell",
+      "source": "NBA.com",
+      "verifiedAt": "2026-10-20T14:24:37.228609+00:00"
+    },
+    "77142": {
+      "hometown": "Lansing, Michigan",
+      "url": "https://www.nba.com/history/legends/profiles/magic-johnson",
+      "source": "NBA.com",
+      "verifiedAt": "2026-10-20T14:24:37.228609+00:00"
+    },
+    "78497": {
+      "hometown": "Cheylan, West Virginia",
+      "url": "https://www.nba.com/history/legends/profiles/jerry-west",
+      "source": "NBA.com",
+      "verifiedAt": "2026-10-20T14:24:37.228609+00:00"
+    }
+  }
+}

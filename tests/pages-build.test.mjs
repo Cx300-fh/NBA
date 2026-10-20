@@ -20,3 +20,23 @@ test('all complete-season statistics and recent boxscores are included as indepe
  for(const key of ['roster','schedule','scoreboard'])assert.deepEqual(JSON.parse(await readFile(`${root}/data/${key}.json`,'utf8')),s[key]);
  for(const id of Object.keys(s.boxes))await access(`${root}/data/boxscore-${id}.json`);
 });
+
+test('player library is split into per-season and 64 profile/career shards with no broken references',async()=>{
+ const index=JSON.parse(await readFile(root+'/explore/player-index.json','utf8'));assert.ok(index.rows.length>5000);
+ const lebron=index.rows.find(p=>p.id===2544);assert.equal(lebron.draftYear,2003);
+ const profile=JSON.parse(await readFile(root+'/explore/profiles/48.json','utf8'));assert.equal(profile.profiles['2544'].birthDate,'1984-12-30');
+ const career=JSON.parse(await readFile(root+'/explore/careers/61.json','utf8'));assert.equal(career.careers['893'].rows.length,15);
+ const archive=JSON.parse(await readFile(root+'/explore/archive/season-2015-16.json','utf8'));assert.ok(archive.shots.rows.length>400);
+ for(const file of ['kawhi-2019','lebron-2016','ray-allen-2013','jordan-1998','curry-2016','mcgrady-2004'])await access(root+'/images/moments/'+file+'.jpg');
+});
+test('every generated profile and season remains present when the library is packaged',async()=>{
+ const index=JSON.parse(await readFile(root+'/explore/player-index.json','utf8'));const ids=new Set();let careers=0;
+ for(let n=0;n<64;n++){
+  const part=String(n).padStart(2,'0');const profiles=JSON.parse(await readFile(root+'/explore/profiles/'+part+'.json','utf8')).profiles;
+  for(const [id,profile] of Object.entries(profiles)){assert.equal(Number(id)%64,n);assert.equal(profile.id,Number(id));assert.ok(!ids.has(id));ids.add(id)}
+  const rows=JSON.parse(await readFile(root+'/explore/careers/'+part+'.json','utf8')).careers;careers+=Object.keys(rows).length;
+ }
+ assert.equal(ids.size,index.rows.length);assert.ok(careers>3000);
+ const archive=JSON.parse(await readFile('data/archive/index.json','utf8'));
+ for(const entry of archive.seasons){const file=JSON.parse(await readFile(root+'/explore/archive/season-'+entry.season+'.json','utf8'));assert.equal(file.season,entry.season);for(const resource of entry.availableResources)assert.ok(file[resource].rows.length>0,entry.season+' '+resource)}
+});

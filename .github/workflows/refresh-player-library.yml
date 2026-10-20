@@ -1,0 +1,32 @@
+name: Refresh player library
+on:
+  schedule:
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nba-player-library
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Update official player directory and bios
+        run: python scripts/update-player-profiles.py
+      - name: Verify player library and archive
+        run: python tests/library-data.test.py
+      - name: Commit player library
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/player-index.json data/player-profiles.json
+          if ! git diff --staged --quiet; then
+            git commit -m 'data: refresh official player profiles'
+            git push
+          fi

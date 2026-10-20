@@ -1,10 +1,13 @@
 import { STATIC_PAGES, assetPath } from './site-mode.ts';
 import type { Envelope, Game } from './basketball.ts';
 import { validateBoxscore } from './boxscore.ts';
+import archiveIndex from '../data/archive/index.json' with {type:'json'};
+const CURRENT_SEASONS=['2024-25','2025-26','2026-27'];
 const RESOURCES = ['players', 'teams', 'standings', 'bpm', 'roster', 'schedule', 'scoreboard', 'boxscore'];
-const SEASONS = ['2024-25', '2025-26', '2026-27'];
+const SEASONS = [...CURRENT_SEASONS,...archiveIndex.seasons.map(s=>s.season)];
 export function staticDataPath(resource: string, season: string, id = '') {
   if (!RESOURCES.includes(resource) || !SEASONS.includes(season) || (resource === 'boxscore' && !/^00\d{8}$/.test(id))) throw Error('无效的数据请求');
+  if (!CURRENT_SEASONS.includes(season)&&['players','teams','standings','bpm'].includes(resource)) return assetPath(`explore/archive/season-${season}.json`);
   if (['players', 'teams', 'standings', 'bpm'].includes(resource)) return assetPath(`data/${resource}-${season}.json`);
   return assetPath(resource === 'boxscore' ? `data/boxscore-${id}.json` : `data/${resource}.json`);
 }
@@ -40,12 +43,13 @@ export async function fetchStaticDataset(resource: string, season: string, id = 
   if (live) {
     try { return await liveDataset(resource, id); } catch { /* Browser CORS and upstream restrictions must not break the static app. */ }
   }
-  const result = await json(path);
+  const raw = await json(path);
+  const result = !CURRENT_SEASONS.includes(season)&&['players','teams','standings','bpm'].includes(resource)?raw[resource]:raw;
   if (!result || typeof result !== 'object' || (!Array.isArray(result.rows) && !Array.isArray(result.games) && !result.game)) throw Error('数据快照格式异常');
   return live ? { ...result, stale: true, warning: '未能直连 NBA 官方数据，正在显示最近一次定时快照。' } : result;
 }
 export async function fetchDataset(resource: string, season: string, id = ''): Promise<Envelope> {
-  if (STATIC_PAGES) return fetchStaticDataset(resource, season, id);
+  if (STATIC_PAGES || !CURRENT_SEASONS.includes(season)) return fetchStaticDataset(resource, season, id);
   const q = new URLSearchParams({ resource, season, ...(id ? { id } : {}) });
   return json('/api/nba?' + q);
 }

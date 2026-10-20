@@ -19,15 +19,19 @@ jobs:
           python-version: '3.12'
       - name: Download official snapshots
         run: python scripts/update-data.py
+      - name: Update current shooting areas
+        run: python scripts/update-archive.py --refresh-current
       - name: Check data integrity
-        run: python tests/data.test.py
+        run: |
+          python tests/data.test.py
+          python tests/library-data.test.py
       - name: Settle monthly predictions
         run: python scripts/settle-predictions.py
       - name: Commit refreshed snapshots
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/snapshot.json predictions/
+          git add data/snapshot.json data/archive/ data/careers/ predictions/
           if ! git diff --staged --quiet; then
             git commit -m 'data: refresh official NBA snapshots'
             git push

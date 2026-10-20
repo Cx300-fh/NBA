@@ -25,6 +25,8 @@ jobs:
       - name: Check notebook and dates
         run: pnpm test
       - name: Check official snapshots
-        run: python tests/data.test.py
+        run: |
+          python tests/data.test.py
+          python tests/library-data.test.py
       - name: Build
         run: pnpm build

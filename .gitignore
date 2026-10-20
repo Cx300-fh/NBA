@@ -63,3 +63,5 @@ __pycache__/
 /public/data/
 
 /pages/.seed.json
+
+/public/explore/

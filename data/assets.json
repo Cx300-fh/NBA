@@ -10,7 +10,13 @@
     "public/images/jokic.jpg": "https://cdn.nba.com/manage/2026/02/GettyImages-2259884746-scaled-e1770522959138.jpg",
     "public/images/giannis.jpg": "https://cdn.nba.com/manage/2026/10/GettyImages-2298624394.jpg",
     "public/images/edwards.jpg": "https://cdn.nba.com/manage/2026/01/GettyImages-2254726580-scaled-e1767940860326.jpg",
-    "public/images/brunson.jpg": "https://cdn.nba.com/manage/2026/06/GettyImages_jalenbrunson_finals.jpg"
+    "public/images/brunson.jpg": "https://cdn.nba.com/manage/2026/06/GettyImages_jalenbrunson_finals.jpg",
+    "public/images/moments/kawhi-2019.jpg": "https://cdn.nba.com/manage/2026/05/GettyImages-1143370646.jpg",
+    "public/images/moments/lebron-2016.jpg": "https://cdn.nba.com/manage/2021/09/lebron-block-2016-finals.jpg",
+    "public/images/moments/ray-allen-2013.jpg": "https://cdn.nba.com/manage/2017/07/ray-allen-2013.jpg",
+    "public/images/moments/jordan-1998.jpg": "https://cdn.nba.com/manage/2026/06/Thumbnail-Dimensions.jpg",
+    "public/images/moments/curry-2016.jpg": "https://cdn.nba.com/manage/2023/02/GettyImages-512778226-scaled.jpg",
+    "public/images/moments/mcgrady-2004.jpg": "https://cdn.nba.com/manage/2022/09/12_9_04RocketsvSpurs.jpg"
   },
   "logos": "https://cdn.nba.com/logos/nba/{teamId}/primary/L/logo.svg",
   "headshots": "https://cdn.nba.com/headshots/nba/latest/1040x760/{playerId}.png",

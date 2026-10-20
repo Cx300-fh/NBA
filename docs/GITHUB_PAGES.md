@@ -46,6 +46,16 @@ NBA 单场统计没有提供可靠出手坐标时，赛后展示有数据依据�
 
 接口权限依据：[GitHub Contents API](https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents)、[Fine-grained tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)。
 
+## 球员与历史资料
+
+新增 Players 页，排行榜姓名和对比卡也可进入完整档案。历史赛季同时出现在 Statistics 和 Contrast 的赛季选择器中。2025–26 数据已存在；2026–27 若尚无常规赛记录，页面会提供2025–26入口。
+
+原始来源与覆盖范围见 [球员档案](../data/PLAYER_PROFILES.md)、[历史数据](../data/archive/README.md)。`prepare-explore.mjs` 在两种构建里生成静态资料，Pages 使用 `/NBA/explore/` 前缀，Worker 使用 `/explore/`。目录单独读取，详情和生涯按ID拆64份，历史资料按赛季读取。构建产物不需要提交。
+
+`Refresh player library` 每天更新目录／详细档案，`Refresh official NBA data` 每6小时更新近期数据与当前赛季区域投篮；两个定时任务成功后都会触发 Pages 发布。已成功收集的历史资料默认保留，减少重复抓取。
+
+经典回放需访问第三方YouTube播放器，仅点击播放后加载；源站限制时可打开NBA或YouTube原页。
+
 ## 本地构建
 
 ```bash

@@ -22,9 +22,10 @@ def params(season,measure='Base'):
  return dict(College='',Conference='',Country='',DateFrom='',DateTo='',Division='',DraftPick='',DraftYear='',GameScope='',GameSegment='',Height='',LastNGames=0,LeagueID='00',Location='',MeasureType=measure,Month=0,OpponentTeamID=0,Outcome='',PORound=0,PaceAdjust='N',PerMode='PerGame',Period=0,PlayerExperience='',PlayerPosition='',PlusMinus='N',Rank='N',Season=season,SeasonSegment='',SeasonType='Regular Season',ShotClockRange='',StarterBench='',TeamID=0,VsConference='',VsDivision='',Weight='')
 def stats(endpoint,p):return rows(get('https://stats.nba.com/stats/'+endpoint+'?'+urlencode(p)))
 def pack(data,source,url,season=None):return {'rows':data,'source':source,'url':url,'season':season,'updatedAt':now(),'stale':False}
+ADVANCED_KEYS={'OFF_RATING','DEF_RATING','NET_RATING','AST_PCT','AST_TO','OREB_PCT','DREB_PCT','REB_PCT','TM_TOV_PCT','EFG_PCT','TS_PCT','USG_PCT','PACE','PIE'}
 def table(kind,season):
  endpoint='leaguedashplayerstats' if kind=='players' else 'leaguedashteamstats'
- base=stats(endpoint,params(season));advanced=stats(endpoint,params(season,'Advanced'));key='PLAYER_ID' if kind=='players' else 'TEAM_ID';ad={r[key]:r for r in advanced}
+ base=stats(endpoint,params(season));advanced=stats(endpoint,params(season,'Advanced'));key='PLAYER_ID' if kind=='players' else 'TEAM_ID';ad={r[key]:{k:v for k,v in r.items() if k in ADVANCED_KEYS} for r in advanced}
  merged=[{k:v for k,v in {**r,**ad.get(r[key],{})}.items() if k in KEEP} for r in base]
  return pack(merged,'NBA.com',f'https://www.nba.com/stats/{kind}/traditional?Season={season}',season)
 def standings(season):return pack(stats('leaguestandingsv3',{'LeagueID':'00','Season':season,'SeasonType':'Regular Season'}),'NBA.com',f'https://www.nba.com/standings?Season={season}',season)

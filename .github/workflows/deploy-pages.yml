@@ -5,7 +5,7 @@ on:
     paths-ignore: ['predictions/**']
   workflow_dispatch:
   workflow_run:
-    workflows: ['Refresh official NBA data']
+    workflows: ['Refresh official NBA data', 'Refresh player library']
     types: [completed]
 permissions:
   contents: read

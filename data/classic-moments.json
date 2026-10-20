@@ -1,0 +1,325 @@
+[
+  {
+    "id": "kawhi-2019",
+    "title": "四次弹框，整个球馆屏住呼吸",
+    "date": "2019-05-12",
+    "season": "2018-19",
+    "playerId": 202695,
+    "playerName": "Kawhi Leonard",
+    "teamIds": [
+      1610612755,
+      1610612761
+    ],
+    "competition": "季后赛",
+    "round": "东部半决赛 · 抢七",
+    "score": {
+      "awayTeamId": 1610612755,
+      "homeTeamId": 1610612761,
+      "away": 90,
+      "home": 92
+    },
+    "gameId": "0041800217",
+    "sourceUrl": "https://www.nba.com/watch/video/tdih-kawhi-leonard-game-winning-buzzer-beater-vs-phi-in-game-7-2019",
+    "posterSource": "https://cdn.nba.com/manage/2026/05/GettyImages-1143370646.jpg",
+    "youtubeId": "jnvFlgo4tXQ",
+    "videoPublisher": "NBA",
+    "factUrl": "https://www.nba.com/watch/video/game-recap-raptors-92-sixers-90",
+    "interaction": {
+      "question": "最后起跳干扰伦纳德投篮的球员是谁？",
+      "options": [
+        "本·西蒙斯",
+        "乔尔·恩比德",
+        "吉米·巴特勒"
+      ],
+      "answerIndex": 1,
+      "explanation": "注意西蒙斯与恩比德的防守交接，再看出手时的封堵角度。"
+    },
+    "sourceName": "NBA.com",
+    "videoUrl": null,
+    "embedUrl": "https://www.youtube-nocookie.com/embed/jnvFlgo4tXQ?rel=0",
+    "watchUrl": "https://www.youtube.com/watch?v=jnvFlgo4tXQ",
+    "poster": "images/moments/kawhi-2019.jpg",
+    "verification": {
+      "checkedAt": "2026-10-20T14:19:55.474393+00:00",
+      "sourceHttpStatus": 200,
+      "oEmbedHttpStatus": 200,
+      "oEmbedAuthor": "NBA",
+      "oEmbedAuthorUrl": "https://www.youtube.com/@NBA",
+      "embedHttpStatus": 200,
+      "embedContentType": "text/html; charset=utf-8",
+      "posterHttpStatus": 200,
+      "posterContentType": "image/jpeg",
+      "posterBytes": 379870,
+      "scope": "HTTP and official publisher metadata only; browser playback and regional availability not verified"
+    }
+  },
+  {
+    "id": "lebron-2016",
+    "title": "THE BLOCK",
+    "date": "2016-06-19",
+    "season": "2015-16",
+    "playerId": 2544,
+    "playerName": "LeBron James",
+    "teamIds": [
+      1610612739,
+      1610612744
+    ],
+    "competition": "总决赛",
+    "round": "总决赛 · 抢七",
+    "score": {
+      "awayTeamId": 1610612739,
+      "homeTeamId": 1610612744,
+      "away": 93,
+      "home": 89
+    },
+    "gameId": "0041500407",
+    "sourceUrl": "https://www.nba.com/watch/video/top-finals-moments-lebron-james-clutch-block",
+    "posterSource": "https://cdn.nba.com/manage/2021/09/lebron-block-2016-finals.jpg",
+    "youtubeId": "-zd62MxKXp8",
+    "videoPublisher": "NBA",
+    "factUrl": "https://www.nba.com/news/history-finals-moments-lebron-chasedown-block-2016",
+    "interaction": {
+      "question": "这次回防，你最想重新观察哪一环？",
+      "options": [
+        "JR 如何延缓伊戈达拉的上篮",
+        "詹姆斯的追防路线",
+        "起球与封盖的时机"
+      ],
+      "explanation": "带着一个观察点重看，判断它如何影响最后的出手机会。"
+    },
+    "sourceName": "NBA.com",
+    "videoUrl": null,
+    "embedUrl": "https://www.youtube-nocookie.com/embed/-zd62MxKXp8?rel=0",
+    "watchUrl": "https://www.youtube.com/watch?v=-zd62MxKXp8",
+    "poster": "images/moments/lebron-2016.jpg",
+    "verification": {
+      "checkedAt": "2026-10-20T14:19:55.474393+00:00",
+      "sourceHttpStatus": 200,
+      "oEmbedHttpStatus": 200,
+      "oEmbedAuthor": "NBA",
+      "oEmbedAuthorUrl": "https://www.youtube.com/@NBA",
+      "embedHttpStatus": 200,
+      "embedContentType": "text/html; charset=utf-8",
+      "posterHttpStatus": 200,
+      "posterContentType": "image/jpeg",
+      "posterBytes": 718761,
+      "scope": "HTTP and official publisher metadata only; browser playback and regional availability not verified"
+    }
+  },
+  {
+    "id": "ray-allen-2013",
+    "title": "退后一步，留下一个冠军的机会",
+    "date": "2013-06-18",
+    "season": "2012-13",
+    "playerId": 951,
+    "playerName": "Ray Allen",
+    "teamIds": [
+      1610612759,
+      1610612748
+    ],
+    "competition": "总决赛",
+    "round": "总决赛 · 第六场",
+    "score": {
+      "awayTeamId": 1610612759,
+      "homeTeamId": 1610612748,
+      "away": 100,
+      "home": 103
+    },
+    "gameId": "0041200406",
+    "sourceUrl": "https://www.nba.com/watch/video/top-finals-moments-ray-allens-clutch-three",
+    "posterSource": "https://cdn.nba.com/manage/2017/07/ray-allen-2013.jpg",
+    "youtubeId": "tr6XsZVb-ZE",
+    "videoPublisher": "NBA",
+    "factUrl": "https://www.nba.com/news/history-top-moments-ray-allen-3-pointer-2013-finals",
+    "interaction": {
+      "question": "接到波什传球前，雷阿伦先完成了什么？",
+      "options": [
+        "退到右侧底角三分线外",
+        "切入篮下",
+        "上前给持球人掩护"
+      ],
+      "answerIndex": 0,
+      "explanation": "留意他的脚步和三分线位置，接球前的空间调整让这次投篮成为三分。"
+    },
+    "sourceName": "NBA.com",
+    "videoUrl": null,
+    "embedUrl": "https://www.youtube-nocookie.com/embed/tr6XsZVb-ZE?rel=0",
+    "watchUrl": "https://www.youtube.com/watch?v=tr6XsZVb-ZE",
+    "poster": "images/moments/ray-allen-2013.jpg",
+    "verification": {
+      "checkedAt": "2026-10-20T14:19:55.474393+00:00",
+      "sourceHttpStatus": 200,
+      "oEmbedHttpStatus": 200,
+      "oEmbedAuthor": "NBA",
+      "oEmbedAuthorUrl": "https://www.youtube.com/@NBA",
+      "embedHttpStatus": 200,
+      "embedContentType": "text/html; charset=utf-8",
+      "posterHttpStatus": 200,
+      "posterContentType": "image/jpeg",
+      "posterBytes": 375785,
+      "scope": "HTTP and official publisher metadata only; browser playback and regional availability not verified"
+    }
+  },
+  {
+    "id": "jordan-1998",
+    "title": "最后一投，第二个三连冠",
+    "date": "1998-06-14",
+    "season": "1997-98",
+    "playerId": 893,
+    "playerName": "Michael Jordan",
+    "teamIds": [
+      1610612741,
+      1610612762
+    ],
+    "competition": "总决赛",
+    "round": "总决赛 · 第六场",
+    "score": {
+      "awayTeamId": 1610612741,
+      "homeTeamId": 1610612762,
+      "away": 87,
+      "home": 86
+    },
+    "gameId": "0049700088",
+    "sourceUrl": "https://www.nba.com/watch/video/tdih-michael-jordan-steal-and-eventual-game-winning-step-back-jumper-in-game-6-in-1998",
+    "posterSource": "https://cdn.nba.com/manage/2026/06/Thumbnail-Dimensions.jpg",
+    "youtubeId": "kwAu78IiixE",
+    "videoPublisher": "NBA",
+    "factUrl": "https://www.nba.com/news/history-top-moments-michael-jordan-final-shot-1998",
+    "interaction": {
+      "question": "最后一次出手，乔丹主要怎样创造空间？",
+      "options": [
+        "变向运球后急停跳投",
+        "接掩护后空切上篮",
+        "低位接球转身勾手"
+      ],
+      "answerIndex": 0,
+      "explanation": "把注意力放在变向、重心和急停之间的衔接。"
+    },
+    "sourceName": "NBA.com",
+    "videoUrl": null,
+    "embedUrl": "https://www.youtube-nocookie.com/embed/kwAu78IiixE?rel=0",
+    "watchUrl": "https://www.youtube.com/watch?v=kwAu78IiixE",
+    "poster": "images/moments/jordan-1998.jpg",
+    "verification": {
+      "checkedAt": "2026-10-20T14:19:55.474393+00:00",
+      "sourceHttpStatus": 200,
+      "oEmbedHttpStatus": 200,
+      "oEmbedAuthor": "NBA",
+      "oEmbedAuthorUrl": "https://www.youtube.com/@NBA",
+      "embedHttpStatus": 200,
+      "embedContentType": "text/html; charset=utf-8",
+      "posterHttpStatus": 200,
+      "posterContentType": "image/jpeg",
+      "posterBytes": 489470,
+      "scope": "HTTP and official publisher metadata only; browser playback and regional availability not verified"
+    }
+  },
+  {
+    "id": "curry-2016",
+    "title": "BANG. BANG.",
+    "date": "2016-02-27",
+    "season": "2015-16",
+    "playerId": 201939,
+    "playerName": "Stephen Curry",
+    "teamIds": [
+      1610612744,
+      1610612760
+    ],
+    "competition": "常规赛",
+    "round": "加时 · 超远制胜三分",
+    "score": {
+      "awayTeamId": 1610612744,
+      "homeTeamId": 1610612760,
+      "away": 121,
+      "home": 118
+    },
+    "gameId": "0021500874",
+    "sourceUrl": "https://www.nba.com/watch/video/this-date-in-nba-history-stephen-curry-long-distance-game-winner-vs-okc-in-2016",
+    "posterSource": "https://cdn.nba.com/manage/2023/02/GettyImages-512778226-scaled.jpg",
+    "youtubeId": "uC0VY3EeBnA",
+    "videoPublisher": "Golden State Warriors",
+    "factUrl": "https://www.nba.com/game/gsw-vs-okc-0021500874",
+    "interaction": {
+      "question": "决定胜负的这一攻，库里选择了什么？",
+      "options": [
+        "持球推进后直接超远出手",
+        "叫暂停后重新发边线球",
+        "无球切入接球上篮"
+      ],
+      "answerIndex": 0,
+      "explanation": "观察防守者开始压迫的位置，再判断超远射程怎样改变防守距离。"
+    },
+    "sourceName": "NBA.com",
+    "videoUrl": null,
+    "embedUrl": "https://www.youtube-nocookie.com/embed/uC0VY3EeBnA?rel=0",
+    "watchUrl": "https://www.youtube.com/watch?v=uC0VY3EeBnA",
+    "poster": "images/moments/curry-2016.jpg",
+    "verification": {
+      "checkedAt": "2026-10-20T14:19:55.474393+00:00",
+      "sourceHttpStatus": 200,
+      "oEmbedHttpStatus": 200,
+      "oEmbedAuthor": "Golden State Warriors",
+      "oEmbedAuthorUrl": "https://www.youtube.com/@warriors",
+      "embedHttpStatus": 200,
+      "embedContentType": "text/html; charset=utf-8",
+      "posterHttpStatus": 200,
+      "posterContentType": "image/jpeg",
+      "posterBytes": 455335,
+      "scope": "HTTP and official publisher metadata only; browser playback and regional availability not verified"
+    }
+  },
+  {
+    "id": "mcgrady-2004",
+    "title": "35 秒，13 分",
+    "date": "2004-12-09",
+    "season": "2004-05",
+    "playerId": 1503,
+    "playerName": "Tracy McGrady",
+    "teamIds": [
+      1610612759,
+      1610612745
+    ],
+    "competition": "常规赛",
+    "round": "末节 · 逆转马刺",
+    "score": {
+      "awayTeamId": 1610612759,
+      "homeTeamId": 1610612745,
+      "away": 80,
+      "home": 81
+    },
+    "gameId": "0020400273",
+    "sourceUrl": "https://www.nba.com/watch/video/channels/nba_tv/2013/08/26/tracy-mcgrady-13-points-in-35-seconds.nba",
+    "posterSource": "https://cdn.nba.com/manage/2022/09/12_9_04RocketsvSpurs.jpg",
+    "youtubeId": "9C6gDS9YGAU",
+    "videoPublisher": "NBA",
+    "factUrl": "https://www.nba.com/game/sas-vs-hou-0020400273",
+    "interaction": {
+      "question": "逆转中那次四分打是怎样完成的？",
+      "options": [
+        "三分命中，同时造成犯规",
+        "两次普通上篮",
+        "一次扣篮加两次罚球"
+      ],
+      "answerIndex": 0,
+      "explanation": "重看麦迪出手时如何利用扑防，留意投篮动作与身体接触。"
+    },
+    "sourceName": "NBA.com",
+    "videoUrl": null,
+    "embedUrl": "https://www.youtube-nocookie.com/embed/9C6gDS9YGAU?rel=0",
+    "watchUrl": "https://www.youtube.com/watch?v=9C6gDS9YGAU",
+    "poster": "images/moments/mcgrady-2004.jpg",
+    "verification": {
+      "checkedAt": "2026-10-20T14:19:55.474393+00:00",
+      "sourceHttpStatus": 200,
+      "oEmbedHttpStatus": 200,
+      "oEmbedAuthor": "NBA",
+      "oEmbedAuthorUrl": "https://www.youtube.com/@NBA",
+      "embedHttpStatus": 200,
+      "embedContentType": "text/html; charset=utf-8",
+      "posterHttpStatus": 200,
+      "posterContentType": "image/jpeg",
+      "posterBytes": 148428,
+      "scope": "HTTP and official publisher metadata only; browser playback and regional availability not verified"
+    }
+  }
+]
