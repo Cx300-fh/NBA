@@ -1,6 +1,16 @@
 {
   "version": 1,
   "month": "2026-10",
-  "updatedAt": null,
-  "predictions": []
+  "updatedAt": "2026-10-20T12:33:13.547Z",
+  "predictions": [
+    {
+      "gameId": "0022600003",
+      "gameTimeUTC": "2026-10-21T01:30:00Z",
+      "homeTeamId": 1610612759,
+      "awayTeamId": 1610612760,
+      "pickedTeamId": 1610612759,
+      "createdAt": "2026-10-20T12:33:13.547Z",
+      "updatedAt": "2026-10-20T12:33:13.547Z"
+    }
+  ]
 }
