@@ -7,5 +7,19 @@
   },
   "logos": "https://cdn.nba.com/logos/nba/{teamId}/primary/L/logo.svg",
   "headshots": "https://cdn.nba.com/headshots/nba/latest/1040x760/{playerId}.png",
-  "font": "https://fonts.google.com/specimen/Barlow+Condensed"
+  "font": "https://fonts.google.com/specimen/Barlow+Condensed",
+  "additional_fonts": {
+    "CourtImpact": {
+      "family": "Anton",
+      "license": "public/fonts/anton-OFL.txt"
+    },
+    "CourtSans": {
+      "family": "DM Sans",
+      "license": "public/fonts/dmsans-OFL.txt"
+    },
+    "CourtMono": {
+      "family": "IBM Plex Mono",
+      "license": "public/fonts/ibmplexmono-OFL.txt"
+    }
+  }
 }

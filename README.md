@@ -65,7 +65,7 @@ GitHub Actions 的计划任务定义在 `.github/workflows/refresh-nba-data.yml`
 
 ## 视觉素材
 
-比赛照片与球员头像／球队标志来自 NBA 官方 CDN，版权归 NBA、球队及相应摄影权利人所有。本项目是独立观赛辅助工具，与 NBA 官方没有隶属关系。素材来源见 `data/assets.json`。显示字体 Barlow Condensed 采用 SIL Open Font License，许可附于 `public/fonts/OFL.txt`。
+比赛照片与球员头像／球队标志来自 NBA 官方 CDN，版权归 NBA、球队及相应摄影权利人所有。本项目是独立观赛辅助工具，与 NBA 官方没有隶属关系。素材来源见 `data/assets.json`。字体使用 Anton、Barlow Condensed、DM Sans 与 IBM Plex Mono，均采用 SIL Open Font License，许可附于 `public/fonts/`。
 
 ## 验证
 
