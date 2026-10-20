@@ -57,3 +57,7 @@ next-env.d.ts
 
 *.tsbuildinfo
 __pycache__/
+
+# Generated GitHub Pages artifact and split data feeds
+/dist-pages/
+/public/data/

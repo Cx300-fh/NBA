@@ -14,7 +14,9 @@
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/core.test.ts && node --test tests/api.test.mjs",
-    "data:update": "python scripts/update-data.py"
+    "data:update": "python scripts/update-data.py",
+    "build:pages": "node scripts/build-pages.mjs",
+    "test:pages": "node --experimental-strip-types --test tests/pages-data.test.ts && node --test tests/pages-build.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -2,6 +2,10 @@
 
 一个为认真看球的人设计的 NBA 观赛网站。全屏球员海报，标签切换页面，NBA 官方统计，以及你自己的球员观察手记。
 
+**GitHub Pages：** <https://cx300-fh.github.io/NBA/>（首次启用需在仓库 Settings → Pages 将 Source 设为 GitHub Actions）。完整步骤见 [GitHub Pages 部署指南](docs/GITHUB_PAGES.md)。
+
+原服务端构建使用 `pnpm build`；Pages 静态构建使用 `pnpm build:pages`。
+
 - **Home**：三张真实比赛照片构成的球员主题海报。
 - **Game Center**：北京时间比赛日、日期与球队筛选、实时比分、逐场技术统计、已观看标记。
 - **球员观察**：防守选择、得分手段、三分稳定性、组织决策、无球参与、比赛投入六项评分；观察重点、自由笔记、节次与剩余时间标记。未评分保持为空，个人评价不冒充官方数据。
