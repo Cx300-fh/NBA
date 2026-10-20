@@ -1,7 +1,7 @@
 {
   "version": 1,
   "month": "2026-10",
-  "updatedAt": "2026-10-20T12:38:01.354Z",
+  "updatedAt": "2026-10-20T12:38:21.274Z",
   "predictions": [
     {
       "gameId": "0022600001",
@@ -11,6 +11,15 @@
       "pickedTeamId": 1610612738,
       "createdAt": "2026-10-20T12:38:01.354Z",
       "updatedAt": "2026-10-20T12:38:01.354Z"
+    },
+    {
+      "gameId": "0022600002",
+      "gameTimeUTC": "2026-10-20T23:00:00Z",
+      "homeTeamId": 1610612752,
+      "awayTeamId": 1610612755,
+      "pickedTeamId": 1610612755,
+      "createdAt": "2026-10-20T12:38:21.274Z",
+      "updatedAt": "2026-10-20T12:38:21.274Z"
     },
     {
       "gameId": "0022600003",
