@@ -1,0 +1,32 @@
+name: Refresh official NBA data
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+concurrency:
+  group: nba-data-refresh
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download official snapshots
+        run: python scripts/update-data.py
+      - name: Check data integrity
+        run: python tests/data.test.py
+      - name: Commit refreshed snapshots
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/snapshot.json
+          if ! git diff --staged --quiet; then
+            git commit -m 'data: refresh official NBA snapshots'
+            git push
+          fi

@@ -1,0 +1,11 @@
+{
+  "images": {
+    "public/images/hero.jpg": "https://cdn.nba.com/manage/2026/10/GettyImages-2253082891-1-scaled.jpg",
+    "public/images/curry.jpg": "https://cdn.nba.com/manage/2026/10/curry-1920-2300898213.jpg",
+    "public/images/lebron.jpg": "https://cdn.nba.com/manage/2026/10/lebron-1920-2299301590.jpg",
+    "public/images/opener.png": "https://cdn.nba.com/manage/2026/10/season-opening-night-16x9-home-hero.png"
+  },
+  "logos": "https://cdn.nba.com/logos/nba/{teamId}/primary/L/logo.svg",
+  "headshots": "https://cdn.nba.com/headshots/nba/latest/1040x760/{playerId}.png",
+  "font": "https://fonts.google.com/specimen/Barlow+Condensed"
+}
