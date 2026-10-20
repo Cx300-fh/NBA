@@ -13,7 +13,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/core.test.ts && node --test tests/api.test.mjs",
+    "test": "node --experimental-strip-types --test tests/core.test.ts tests/predictions.test.ts && node --experimental-strip-types --test tests/api.test.mjs && python tests/prediction-settlement.test.py",
     "data:update": "python scripts/update-data.py",
     "build:pages": "node scripts/build-pages.mjs",
     "test:pages": "node --experimental-strip-types --test tests/pages-data.test.ts && node --test tests/pages-build.test.mjs"

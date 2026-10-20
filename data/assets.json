@@ -3,7 +3,14 @@
     "public/images/hero.jpg": "https://cdn.nba.com/manage/2026/10/GettyImages-2253082891-1-scaled.jpg",
     "public/images/curry.jpg": "https://cdn.nba.com/manage/2026/10/curry-1920-2300898213.jpg",
     "public/images/lebron.jpg": "https://cdn.nba.com/manage/2026/10/lebron-1920-2299301590.jpg",
-    "public/images/opener.png": "https://cdn.nba.com/manage/2026/10/season-opening-night-16x9-home-hero.png"
+    "public/images/opener.png": "https://cdn.nba.com/manage/2026/10/season-opening-night-16x9-home-hero.png",
+    "public/images/wembanyama.jpg": "https://cdn.nba.com/manage/2026/05/GettyImages_wembyblocks.jpg",
+    "public/images/tatum.jpg": "https://cdn.nba.com/manage/2022/05/USATSI_18264336-1-scaled.jpg",
+    "public/images/doncic.jpg": "https://cdn.nba.com/manage/2026/10/GettyImages-2267466142.jpg",
+    "public/images/jokic.jpg": "https://cdn.nba.com/manage/2026/02/GettyImages-2259884746-scaled-e1770522959138.jpg",
+    "public/images/giannis.jpg": "https://cdn.nba.com/manage/2026/10/GettyImages-2298624394.jpg",
+    "public/images/edwards.jpg": "https://cdn.nba.com/manage/2026/01/GettyImages-2254726580-scaled-e1767940860326.jpg",
+    "public/images/brunson.jpg": "https://cdn.nba.com/manage/2026/06/GettyImages_jalenbrunson_finals.jpg"
   },
   "logos": "https://cdn.nba.com/logos/nba/{teamId}/primary/L/logo.svg",
   "headshots": "https://cdn.nba.com/headshots/nba/latest/1040x760/{playerId}.png",

@@ -8,6 +8,7 @@ import ts from 'typescript';
 const dir=await mkdtemp(join(tmpdir(),'courtside-api-test-'));
 let source=await readFile(new URL('../app/api/nba/route.ts',import.meta.url),'utf8');
 source=source.replace("import snapshot from '@/data/snapshot.json';",`import snapshot from ${JSON.stringify(pathToFileURL(resolve('data/snapshot.json')).href)} with {type:'json'};`);
+source=source.replace("from '@/lib/boxscore'",`from ${JSON.stringify(pathToFileURL(resolve('lib/boxscore.ts')).href)}`);
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const path=join(dir,'api.mjs');await writeFile(path,compiled);const {GET}=await import(pathToFileURL(path).href);
 const realFetch=globalThis.fetch;let calls=0;

@@ -21,11 +21,13 @@ jobs:
         run: python scripts/update-data.py
       - name: Check data integrity
         run: python tests/data.test.py
+      - name: Settle monthly predictions
+        run: python scripts/settle-predictions.py
       - name: Commit refreshed snapshots
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/snapshot.json
+          git add data/snapshot.json predictions/
           if ! git diff --staged --quiet; then
             git commit -m 'data: refresh official NBA snapshots'
             git push

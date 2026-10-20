@@ -15,6 +15,9 @@ for (const [season, value] of Object.entries(snapshot.seasons)) {
 for (const resource of ['schedule', 'scoreboard', 'roster']) await save(resource, snapshot[resource]);
 for (const [id, value] of Object.entries(snapshot.boxes)) await save(`boxscore-${id}`, value);
 await save('status', { generatedAt: new Date().toISOString(), snapshotUpdatedAt: snapshot.updatedAt, updateIntervalHours: 6 });
+// Only a few recent boxes bootstrap the UI; the full growing archive is fetched per game.
+const recentBoxes = Object.entries(snapshot.boxes).sort((a,b) => String(b[1].game?.gameTimeUTC || '').localeCompare(String(a[1].game?.gameTimeUTC || ''))).slice(0,6);
+await writeFile(root + 'pages/.seed.json', JSON.stringify({...snapshot, boxes: Object.fromEntries(recentBoxes)}));
 await build({ root: root + 'pages', configFile: root + 'vite.pages.config.ts' });
 await writeFile(root + 'dist-pages/.nojekyll', '');
 // Hash navigation keeps all normal application links on index.html; fallback also covers accidental deep links.

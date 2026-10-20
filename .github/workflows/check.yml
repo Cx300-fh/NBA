@@ -2,7 +2,7 @@ name: Check COURTSIDE
 on:
   push:
     branches: [main]
-    paths-ignore: ['data/**', 'README.md']
+    paths-ignore: ['data/**', 'predictions/**', 'README.md']
   pull_request:
   workflow_dispatch:
 permissions:

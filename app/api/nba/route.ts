@@ -1,5 +1,6 @@
 import snapshot from '@/data/snapshot.json';
 import type { Envelope, StatRow } from '@/lib/basketball';
+import { validateBoxscore } from '@/lib/boxscore';
 const seed=snapshot as any;
 const memo=new Map<string,{value:Envelope;until:number}>();
 const inflight=new Map<string,Promise<Envelope>>();
@@ -13,7 +14,7 @@ function norm(s:string){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
 async function load(resource:string,season:string,id:string):Promise<Envelope>{
  if(resource==='scoreboard'){const d=await remote('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json');return {...d.scoreboard,source:'NBA.com',url:'https://www.nba.com/games',updatedAt:new Date().toISOString(),stale:false};}
  if(resource==='schedule'){const d=(await remote('https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json')).leagueSchedule;return {games:d.gameDates.flatMap((day:any)=>day.games.map((g:any)=>({gameId:g.gameId,gameStatus:g.gameStatus,gameStatusText:g.gameStatusText,gameTimeUTC:g.gameDateTimeUTC,homeTeam:g.homeTeam,awayTeam:g.awayTeam,arenaName:g.arenaName,gameLabel:g.gameLabel}))),season:d.seasonYear,updatedAt:new Date().toISOString(),source:'NBA.com',url:'https://www.nba.com/schedule',stale:false};}
- if(resource==='boxscore'){const d=await remote(`https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${id}.json`);return {game:d.game,source:'NBA.com',url:`https://www.nba.com/game/${id}/box-score`,updatedAt:new Date().toISOString(),stale:false};}
+ if(resource==='boxscore'){const d=await remote(`https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${id}.json`);return {game:validateBoxscore(d.game,id),source:'NBA.com',url:`https://www.nba.com/game/${id}/box-score`,updatedAt:new Date().toISOString(),stale:false};}
  if(resource==='roster')return envelope(await stats('commonallplayers',{LeagueID:'00',Season:season,IsOnlyCurrentSeason:'1'}),'https://www.nba.com/players',season);
  if(resource==='standings')return envelope(await stats('leaguestandingsv3',{LeagueID:'00',Season:season,SeasonType:'Regular Season'}),`https://www.nba.com/standings?Season=${season}`,season);
  if(resource==='players'||resource==='teams'){

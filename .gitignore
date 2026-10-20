@@ -61,3 +61,5 @@ __pycache__/
 # Generated GitHub Pages artifact and split data feeds
 /dist-pages/
 /public/data/
+
+/pages/.seed.json

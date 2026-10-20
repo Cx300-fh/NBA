@@ -39,6 +39,14 @@ def bpm(season,players):
   except ValueError:continue
  if not out:raise ValueError('No verified BPM table found')
  return pack(list({p['PLAYER_ID']:p for p in reversed(out)}.values()),'Basketball Reference',url,season)
+def boxscore(gid):
+ game=json.loads(get(f'https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{gid}.json'))['game']
+ if game.get('gameId')!=gid:raise ValueError('Boxscore game mismatch')
+ if game.get('gameStatus')==3:
+  for side in ['homeTeam','awayTeam']:
+   team=game.get(side,{})
+   if len(team.get('players',[]))<5 or sum(p.get('statistics',{}).get('points',0) for p in team['players'])!=team.get('score') or team.get('statistics',{}).get('points')!=team.get('score'):raise ValueError('Official final score and player totals are not yet consistent')
+ return {'game':game,'source':'NBA.com','url':f'https://www.nba.com/game/{gid}/box-score','updatedAt':now(),'stale':False}
 def normalize_game(g):
  def t(x):return {k:x.get(k) for k in ['teamId','teamName','teamCity','teamTricode','score','wins','losses']}
  return {'gameId':g['gameId'],'gameStatus':g['gameStatus'],'gameStatusText':g['gameStatusText'],'gameTimeUTC':g.get('gameDateTimeUTC',g.get('gameTimeUTC')),'homeTeam':t(g['homeTeam']),'awayTeam':t(g['awayTeam']),'arenaName':g.get('arenaName',''),'gameLabel':g.get('gameLabel','')}
@@ -69,10 +77,12 @@ def refresh(seasons):
  out['schedule']=keep('schedule',schedule,old.get('schedule'))
  out['scoreboard']=keep('scoreboard',lambda:{**json.loads(get('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json'))['scoreboard'],'source':'NBA.com','updatedAt':now(),'stale':False},old.get('scoreboard'))
  out['roster']=keep('roster',lambda:pack(stats('commonallplayers',{'LeagueID':'00','Season':seasons[-1],'IsOnlyCurrentSeason':1}),'NBA.com','https://www.nba.com/players',seasons[-1]),old.get('roster'))
- cutoff=dt.datetime.now(dt.timezone.utc)-dt.timedelta(days=7)
- recent=[g for g in out['schedule'].get('games',[]) if g['gameStatus'] in [2,3] and g['gameTimeUTC'] and dt.datetime.fromisoformat(g['gameTimeUTC'].replace('Z','+00:00'))>cutoff][-12:]
+ cutoff=dt.datetime.now(dt.timezone.utc)-dt.timedelta(days=14)
+ recent=[g for g in out['schedule'].get('games',[]) if g['gameStatus'] in [2,3] and g['gameTimeUTC'] and dt.datetime.fromisoformat(g['gameTimeUTC'].replace('Z','+00:00'))>cutoff]
+ # Keep completed boxes; revisit live, failed or missing games across the whole recent window.
+ recent=[g for g in recent if g['gameStatus']==2 or out['boxes'].get(g['gameId'],{}).get('game',{}).get('gameStatus')!=3 or out['boxes'].get(g['gameId'],{}).get('stale')]
  with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
-  futures={ex.submit(keep,'box '+g['gameId'],lambda gid=g['gameId']:{'game':json.loads(get(f'https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{gid}.json'))['game'],'source':'NBA.com','updatedAt':now(),'stale':False},out['boxes'].get(g['gameId'])):g['gameId'] for g in recent}
+  futures={ex.submit(keep,'box '+g['gameId'],lambda gid=g['gameId']:boxscore(gid),out['boxes'].get(g['gameId'])):g['gameId'] for g in recent}
   for f,gid in futures.items():out['boxes'][gid]=f.result()
  out['errors']=errors;target.write_text(json.dumps(out,ensure_ascii=False,separators=(',',':'))+'\n');print('Saved',target.stat().st_size,'bytes;',len(errors),'source warnings')
  if not any(x['players']['rows'] for x in out['seasons'].values()):raise SystemExit('No valid player data; refusing a silent empty snapshot')

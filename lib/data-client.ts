@@ -1,5 +1,6 @@
 import { STATIC_PAGES, assetPath } from './site-mode.ts';
 import type { Envelope, Game } from './basketball.ts';
+import { validateBoxscore } from './boxscore.ts';
 const RESOURCES = ['players', 'teams', 'standings', 'bpm', 'roster', 'schedule', 'scoreboard', 'boxscore'];
 const SEASONS = ['2024-25', '2025-26', '2026-27'];
 export function staticDataPath(resource: string, season: string, id = '') {
@@ -30,7 +31,7 @@ async function liveDataset(resource: string, id: string): Promise<Envelope> {
     return { games: d.gameDates.flatMap((day: any) => day.games.map(normalizeScheduledGame)), season: d.seasonYear, ...source, url: 'https://www.nba.com/schedule' };
   }
   const d = await json(root + `liveData/boxscore/boxscore_${id}.json`, true);
-  if (d.game?.gameId !== id) throw Error('技术统计与比赛不匹配');
+  validateBoxscore(d.game, id);
   return { game: d.game, ...source, url: `https://www.nba.com/game/${id}/box-score` };
 }
 export async function fetchStaticDataset(resource: string, season: string, id = ''): Promise<Envelope> {

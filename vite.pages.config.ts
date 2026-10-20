@@ -9,7 +9,7 @@ export default defineConfig({
   base,
   publicDir: root + 'public',
   plugins: [react()],
-  resolve: { alias: { '@': root } },
+  resolve: { alias: [{ find: '@/data/snapshot.json', replacement: root + 'pages/.seed.json' }, { find: '@', replacement: root }] },
   define: { __COURTSIDE_PAGES_BASE__: JSON.stringify(base) },
   build: { outDir: root + 'dist-pages', emptyOutDir: true, target: 'es2022' },
 });

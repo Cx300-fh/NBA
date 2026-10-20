@@ -10,7 +10,7 @@ test('Pages HTML uses the /NBA/ project prefix for scripts, styles and favicon',
  for(const ref of refs){assert.ok(ref.startsWith('/NBA/'),ref);await access(root+'/'+ref.slice('/NBA/'.length))}
 });
 test('poster assets and locally hosted fonts are published',async()=>{
- for(const p of ['images/hero.jpg','images/curry.jpg','images/lebron.jpg','fonts/display-800.ttf','favicon.svg','.nojekyll','404.html'])await access(root+'/'+p);
+ for(const p of ['images/hero.jpg','images/curry.jpg','images/lebron.jpg','images/wembanyama.jpg','images/tatum.jpg','images/doncic.jpg','images/jokic.jpg','images/giannis.jpg','images/edwards.jpg','images/brunson.jpg','fonts/display-800.ttf','favicon.svg','.nojekyll','404.html'])await access(root+'/'+p);
  const cssFiles=(await readdir(root+'/assets')).filter(x=>x.endsWith('.css'));
  for(const file of cssFiles){const css=await readFile(root+'/assets/'+file,'utf8');assert.ok(!css.includes('url(/fonts/'));assert.ok(!css.includes('url("/fonts/'));assert.ok(css.includes('/NBA/fonts/'))}
 });
