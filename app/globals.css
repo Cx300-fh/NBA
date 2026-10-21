@@ -483,3 +483,39 @@ html,body{font-family:var(--font-ui);-webkit-font-smoothing:antialiased;text-ren
 
 .library-player-card{container-type:inline-size}
 .player-card-info>strong.long-name{font-size:clamp(17px,8.2cqw,26px)}
+
+/* A courtside account belongs to the visitor, with no repository setup. */
+.header-tools{display:flex;align-items:center;gap:21px;min-width:0;flex-shrink:0}
+.account-nav-button{display:flex;align-items:center;gap:8px;color:#bdc5d0;font-size:11px;white-space:nowrap;padding:10px 0;max-width:150px}
+.account-nav-button>span{overflow:hidden;text-overflow:ellipsis;max-width:108px}.account-nav-button:hover{color:var(--orange)}
+.account-nav-button>i,.account-button>i{width:4px;height:4px;border-radius:50%;background:#97c6a5;flex-shrink:0}
+.home-masthead .account-nav-button{color:#ffffffc9;text-shadow:0 1px 15px #0009}
+.account-dialog{color:#f1f3f7;position:fixed;inset:0;width:430px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 36px);padding:0;border:1px solid #343e4c;background:#121923;border-radius:4px;box-shadow:0 25px 100px #0008;overflow:auto}
+.account-dialog::backdrop{background:#030912b8;backdrop-filter:blur(8px)}
+.account-dialog-content{position:relative;padding:34px 36px 32px}
+.account-close{position:absolute;right:17px;top:17px}.account-mark{display:flex;align-items:center;gap:9px;color:#ff683c}
+.account-mark>svg{width:23px;height:23px;stroke:currentColor;stroke-width:1.7px}.account-mark>span{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:.4px}
+.account-dialog h2{font-size:28px;font-weight:700;letter-spacing:1px;margin:30px 0 24px;line-height:1.4}
+.account-tabs{display:flex;gap:30px;margin-bottom:25px;border-bottom:1px solid #2d3846}
+.account-tabs>button{padding:0 1px 12px;color:#7e8da0;font-size:13px;position:relative}
+.account-tabs>button.active{color:#f3f5f9}.account-tabs>button.active:after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:#ff683c}
+.account-field{display:flex;flex-direction:column;gap:10px;margin:0 0 20px}
+.account-field>span{font-size:12px;color:#a1afc0}
+.account-field>input,.account-password{height:46px;border:1px solid #354152;background:#18212e;color:#e6edf6;border-radius:2px}
+.account-field>input,.account-password>input{padding:12px 13px;font-size:14px;color:#e7edf5;outline:0;width:100%;min-width:0}
+.account-field>input:focus,.account-password:focus-within{border-color:#ed7957;box-shadow:0 0 0 1px #ed7957}
+.account-field input::placeholder{color:#697b91;font-size:12px}.account-password{display:flex;align-items:center}
+.account-password>input{border:0;background:none;height:100%}.account-password>button{display:flex;align-items:center;justify-content:center;padding:12px;color:#8192a9}
+.account-password>input:focus-visible{outline:0}.account-remember{display:flex;align-items:center;gap:8px;font-size:12px;color:#a0b0c4;margin:1px 0 24px}
+.account-remember>input{accent-color:#ff683c;width:14px;height:14px;margin:0}
+.account-submit{width:100%;display:flex;flex-direction:row-reverse;justify-content:space-between;margin-top:13px;border-radius:2px;font-size:13px;padding:15px 18px;background:#ff683c;color:#111823}
+.account-privacy{font-size:11px;line-height:1.8;color:#71849d;margin:24px 0 0}
+.account-profile{display:flex;flex-direction:column;align-items:center;padding:10px 0 4px;gap:17px}
+.account-avatar{width:68px;height:68px;background:linear-gradient(135deg,#f37a51,#c24a2a);border-radius:50%;display:grid;place-items:center;font-family:var(--font-display);font-size:35px;font-weight:700;color:white}
+.account-profile>strong{font-size:20px;font-weight:600}.account-profile-actions{display:flex;justify-content:center;gap:12px;margin-top:17px;flex-wrap:wrap}
+.account-profile-actions>.outline-button{font-size:12px;padding:10px 13px}
+.account-dialog .field-error{font-size:12px;line-height:1.7;margin-block:14px}.account-button.connected{color:#b9d6c1;border-color:#657d6b}
+@media(min-width:1101px) and (max-width:1350px){.header-tools .notebook-button>span{display:none}.header-tools{gap:19px}.site-header{gap:22px}.home-masthead{gap:24px}}
+@media(max-width:1100px){.header-tools{gap:20px}.home-masthead .header-tools{grid-column:2;grid-row:1;align-self:center}.home-masthead .account-nav-button{font-size:11px}.account-nav-button{font-size:10px}}
+@media(max-width:850px){.header-tools{gap:18px;align-self:flex-start}.account-nav-button{height:29px;padding:0}.home-masthead .header-tools{align-self:center}.site-header .account-nav-button>span{max-width:90px}}
+@media(max-width:620px){.header-tools{gap:16px}.header-tools .notebook-button>span{display:none}.account-nav-button>span{font-size:10px;max-width:85px}.account-nav-button{gap:6px}.account-nav-button>svg{width:15px}.account-dialog-content{padding:30px 25px 27px}.account-dialog h2{font-size:25px;margin-top:26px}.account-field{margin-bottom:18px}.account-field>span{font-size:11px}}
