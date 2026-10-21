@@ -10,6 +10,9 @@ tokenURL.searchParams.set('audience','courtside-prediction-archive');
 const identity=await fetch(tokenURL,{headers:{Authorization:'Bearer '+requestToken},redirect:'error',signal:AbortSignal.timeout(15000)});
 if(!identity.ok)throw Error('GitHub identity request failed: '+identity.status);
 const {value:token}=await identity.json();if(typeof token!=='string')throw Error('GitHub did not return an identity');
+// Non-secret identity metadata helps diagnose a repository or workflow mismatch.
+const claims=JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString());
+console.log('Archive identity: '+JSON.stringify({issuer:claims.iss,audience:claims.aud,repository:claims.repository,ref:claims.ref,workflow:claims.workflow_ref,subject:claims.sub,event:claims.event_name,ttl:claims.exp-claims.iat,issuedSecondsAgo:Math.floor(Date.now()/1000)-claims.iat,notBeforeSecondsAgo:Math.floor(Date.now()/1000)-claims.nbf}));
 async function read(path){const r=await fetch(apiBase+'/'+path,{headers:{Authorization:'Bearer '+token},redirect:'error',signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('Account archive request failed: '+r.status);return r.json()}
 const {months}=await read('archive-months');if(!Array.isArray(months)||months.some(m=>!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m)))throw Error('Invalid archive month list');
 const directory=new URL('../predictions/community/',import.meta.url);await mkdir(directory,{recursive:true});
