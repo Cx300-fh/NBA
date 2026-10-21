@@ -18,7 +18,7 @@ The server determines account ownership from the verified session. Client-suppli
 
 `.github/workflows/archive-account-picks.yml` refreshes all recorded months every six hours and can be run manually. Files are grouped by month for all accounts at `predictions/community/YYYY-MM.json`, using an anonymous participant ID. The database is authoritative, so a new prediction may not appear in GitHub until the next archive run.
 
-The export endpoint verifies a signed GitHub OIDC identity for the exact repository, main branch, audience and archive workflow. No long-lived GitHub credential is stored in the frontend or account service. Actions uses its built-in repository write permission to commit the archives. The export script explicitly allows prediction fields only; usernames, passwords, hashes, sessions and observation notes are excluded. Original owner files at `predictions/YYYY-MM.json` are preserved and are not assigned to an arbitrary new account.
+The export endpoint verifies a signed GitHub OIDC identity for the exact repository, immutable owner/repository IDs, main branch, audience and archive workflow. This repository uses GitHub’s post-July-2026 immutable subject format; its verified IDs are owner `193564111` and repository `1426730723`. No long-lived GitHub credential is stored in the frontend or account service. Actions uses its built-in repository write permission to commit the archives. The export script explicitly allows prediction fields only; usernames, passwords, hashes, sessions and observation notes are excluded. Original owner files at `predictions/YYYY-MM.json` are preserved and are not assigned to an arbitrary new account.
 
 ## Development and deployment
 

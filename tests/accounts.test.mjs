@@ -67,9 +67,9 @@ test('expired sessions, foreign origins and brute force attempts are rejected',a
 });
 test('archive OIDC verifies issuer, exact workflow, branch, audience, expiry and signature',async()=>{
  const pair=generateKeyPairSync('rsa',{modulusLength:2048});const jwk=pair.publicKey.export({format:'jwk'});jwk.kid='account-test-key';const now=Date.now(),seconds=Math.floor(now/1000);
- const base={iss:'https://token.actions.githubusercontent.com',aud:ARCHIVE_AUDIENCE,repository:'Cx300-fh/NBA',ref:'refs/heads/main',workflow_ref:'Cx300-fh/NBA/.github/workflows/archive-account-picks.yml@refs/heads/main',sub:'repo:Cx300-fh/NBA:ref:refs/heads/main',event_name:'schedule',iat:seconds,nbf:seconds-5,exp:seconds+300};
+ const base={iss:'https://token.actions.githubusercontent.com',aud:ARCHIVE_AUDIENCE,repository:'Cx300-fh/NBA',ref:'refs/heads/main',workflow_ref:'Cx300-fh/NBA/.github/workflows/archive-account-picks.yml@refs/heads/main',sub:'repo:Cx300-fh@193564111/NBA@1426730723:ref:refs/heads/main',repository_id:'1426730723',repository_owner_id:'193564111',event_name:'schedule',iat:seconds,nbf:seconds-5,exp:seconds+300};
  const token=(claims=base)=>{const h=Buffer.from(JSON.stringify({alg:'RS256',kid:jwk.kid})).toString('base64url');const b=Buffer.from(JSON.stringify(claims)).toString('base64url');const signature=sign('RSA-SHA256',Buffer.from(h+'.'+b),pair.privateKey).toString('base64url');return h+'.'+b+'.'+signature};
  const fetcher=async()=>Response.json({keys:[jwk]});await verifyArchiveToken(token(),now,fetcher);
- for(const change of [{repository:'attacker/NBA'},{ref:'refs/heads/feature'},{aud:'other'},{workflow_ref:'Cx300-fh/NBA/.github/workflows/other.yml@refs/heads/main'},{exp:seconds-1},{event_name:'pull_request'}])await assert.rejects(verifyArchiveToken(token({...base,...change}),now,fetcher));
+ for(const change of [{repository:'attacker/NBA'},{repository_id:'123'},{repository_owner_id:'123'},{sub:'repo:Cx300-fh/NBA:ref:refs/heads/main'},{ref:'refs/heads/feature'},{aud:'other'},{workflow_ref:'Cx300-fh/NBA/.github/workflows/other.yml@refs/heads/main'},{exp:seconds-1},{event_name:'pull_request'}])await assert.rejects(verifyArchiveToken(token({...base,...change}),now,fetcher));
  const parts=token().split('.');parts[2]='A'.repeat(parts[2].length);await assert.rejects(verifyArchiveToken(parts.join('.'),now,fetcher));
 });

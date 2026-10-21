@@ -5,6 +5,7 @@ export const ACCOUNT_ORIGIN='https://courtside-nba-cx300.pastelsong512.chatgpt.s
 export const PAGES_ORIGIN='https://cx300-fh.github.io';
 export const ARCHIVE_AUDIENCE='courtside-prediction-archive';
 const GITHUB_ISSUER='https://token.actions.githubusercontent.com';
+const ARCHIVE_SUBJECT='repo:Cx300-fh@193564111/NBA@1426730723:ref:refs/heads/main';
 const ARCHIVE_WORKFLOW='Cx300-fh/NBA/.github/workflows/archive-account-picks.yml@refs/heads/main';
 const SESSION_DAYS=30;
 const SCRYPT={N:32768,r:8,p:3,maxmem:48*1024*1024};
@@ -61,7 +62,7 @@ export async function verifyArchiveToken(token:string,now=Date.now(),fetcher:typ
  try{
   if(token.length>16000)throw Error();const parts=token.split('.');if(parts.length!==3)throw Error();
   const header=JSON.parse(Buffer.from(parts[0],'base64url').toString());const claims=JSON.parse(Buffer.from(parts[1],'base64url').toString());const seconds=Math.floor(now/1000);
-  if(header.alg!=='RS256'||typeof header.kid!=='string'||claims.iss!==GITHUB_ISSUER||claims.aud!==ARCHIVE_AUDIENCE||claims.repository!=='Cx300-fh/NBA'||claims.ref!=='refs/heads/main'||claims.workflow_ref!==ARCHIVE_WORKFLOW||claims.sub!=='repo:Cx300-fh/NBA:ref:refs/heads/main'||!['schedule','workflow_dispatch','push'].includes(claims.event_name)||!Number.isFinite(claims.exp)||claims.exp<=seconds||claims.exp>seconds+900||!Number.isFinite(claims.iat)||claims.iat>seconds+30||claims.iat<seconds-900||!Number.isFinite(claims.nbf)||claims.nbf>seconds+30)throw Error();
+  if(header.alg!=='RS256'||typeof header.kid!=='string'||claims.iss!==GITHUB_ISSUER||claims.aud!==ARCHIVE_AUDIENCE||claims.repository!=='Cx300-fh/NBA'||claims.ref!=='refs/heads/main'||claims.workflow_ref!==ARCHIVE_WORKFLOW||claims.sub!==ARCHIVE_SUBJECT||String(claims.repository_id)!=='1426730723'||String(claims.repository_owner_id)!=='193564111'||!['schedule','workflow_dispatch','push'].includes(claims.event_name)||!Number.isFinite(claims.exp)||claims.exp<=seconds||claims.exp>seconds+900||!Number.isFinite(claims.iat)||claims.iat>seconds+30||claims.iat<seconds-900||!Number.isFinite(claims.nbf)||claims.nbf>seconds+30)throw Error();
   const keys=async(force=false)=>{if(force||!githubKeys||githubKeys.until<now){const r=await fetcher(GITHUB_ISSUER+'/.well-known/jwks',{signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error();const v=await r.json() as any;if(!Array.isArray(v.keys))throw Error();githubKeys={keys:v.keys,until:now+3600000}}return githubKeys.keys};
   let key=(await keys()).find((k:any)=>k.kid===header.kid);if(!key)key=(await keys(true)).find((k:any)=>k.kid===header.kid);if(!key)throw Error();
   const cryptoKey=await crypto.subtle.importKey('jwk',key,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
