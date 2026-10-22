@@ -34,5 +34,9 @@ jobs:
           git add data/snapshot.json data/archive/ data/careers/ predictions/
           if ! git diff --staged --quiet; then
             git commit -m 'data: refresh official NBA snapshots'
-            git push
+            for attempt in 1 2 3; do
+              if git push; then exit 0; fi
+              git pull --rebase origin main
+            done
+            exit 1
           fi
