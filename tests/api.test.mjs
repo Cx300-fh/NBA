@@ -117,10 +117,14 @@ test('wrong-season alternate data and older mirrors cannot replace newer verifie
  assert.equal(data.stale,true);assert.equal(data.updatedAt,expected.updatedAt);assert.deepEqual(data.rows,expected.rows);
 });
 test('current shooting-zone archive survives empty remote datasets without a refreshed timestamp',async()=>{
- const isolatedPath=join(dir,'shots-archive.mjs');await writeFile(isolatedPath,compiled);const {GET:isolatedGet}=await import(pathToFileURL(isolatedPath).href);
- const archive=JSON.parse(await readFile(resolve('data/archive/season-2026-27.json'),'utf8')).shots;
+ const archive={rows:[{PLAYER_ID:1,PLAYER_NAME:'Verified player',TEAM_ID:1610612737,zones:[{key:'restricted',label:'篮下限制区',FGM:3,FGA:4,FG_PCT:.75}]}],source:'NBA.com',season:'2026-27',updatedAt:'2026-10-22T12:00:00Z',stale:false};
+ // Keep this regression independent of whether a new season has archived shots in the checkout.
+ const fixtureSource=source.replace(/import currentArchive from [^;]+;/,`const currentArchive=${JSON.stringify({season:'2026-27',shots:archive})};`);
+ assert.notEqual(fixtureSource,source,'The isolated archive fixture must replace the production import');
+ const fixtureCompiled=ts.transpileModule(fixtureSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const isolatedPath=join(dir,'shots-archive.mjs');await writeFile(isolatedPath,fixtureCompiled);const {GET:isolatedGet}=await import(pathToFileURL(isolatedPath).href);
  globalThis.fetch=async url=>String(url).startsWith('https://raw.githubusercontent.com/')?Response.json({rows:[],source:'NBA.com',season:'2026-27',updatedAt:new Date().toISOString(),stale:false}):Response.json({parameters:{LeagueID:'00',Season:'2026-27'},resultSets:{headers:[{columnsToSkip:4,columnSpan:3,columnNames:['Restricted Area']},{columnNames:['PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION']}],rowSet:[]}});
  const data=await(await isolatedGet(new Request('https://test.invalid/api/nba?resource=shots&season=2026-27'))).json();
- assert.equal(data.stale,true);assert.ok(data.rows.length>0);assert.equal(data.rows.length,archive.rows.length);assert.equal(data.updatedAt,archive.updatedAt);
+ assert.equal(data.stale,true);assert.deepEqual(data.rows,archive.rows);assert.equal(data.updatedAt,archive.updatedAt);
 });
 test.after(async()=>{globalThis.fetch=realFetch;await rm(dir,{recursive:true,force:true})});
