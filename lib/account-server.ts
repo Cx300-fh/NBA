@@ -73,10 +73,18 @@ export async function officialSchedule(fresh=false,options:{now?:()=>number;fetc
  if(!fresh&&!options.fetcher&&scheduleMemo&&scheduleMemo.until>now())return scheduleMemo.games;
  let games:Game[];let verifiedUntil=now()+60000;
  try{
-  const r=await fetcher('https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json',{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'error'});
-  if(!r.ok)throw Error('NBA赛程暂不可用');
-  const data=await r.json() as any;if(!Array.isArray(data.leagueSchedule?.gameDates))throw Error('NBA赛程格式不正确');
-  games=verifiedSchedule(data.leagueSchedule.gameDates.flatMap((day:any)=>Array.isArray(day.games)?day.games:[]),data.leagueSchedule.seasonYear);
+  let verified:Game[]|undefined;
+  const query=new URLSearchParams({LeagueID:'00',Season:SEASONS[0]});
+  const sources:[string,number][]=[['https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json',5000],...['stats.wnba.com','stats.gleague.nba.com'].map(host=>[`https://${host}/stats/scheduleleaguev2?${query}`,3000] as [string,number])];
+  for(const [url,timeout] of sources){
+   try{
+    const r=await fetcher(url,{signal:AbortSignal.timeout(timeout),cache:'no-store',redirect:'error'});if(!r.ok)throw Error('NBA赛程暂不可用');
+    const data=await r.json() as any;
+    if(data.leagueSchedule?.leagueId!=='00'||!Array.isArray(data.leagueSchedule?.gameDates))throw Error('NBA赛程格式不正确');
+    verified=verifiedSchedule(data.leagueSchedule.gameDates.flatMap((day:any)=>Array.isArray(day.games)?day.games:[]),data.leagueSchedule.seasonYear);break;
+   }catch{ /* NBA's official sibling hosts expose the same LeagueID=00 service. */ }
+  }
+  if(!verified)throw Error('NBA赛程暂不可用');games=verified;
  }catch{
   try{
    const r=await fetcher(SCHEDULE_MIRROR,{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'error'});

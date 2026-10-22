@@ -8,12 +8,13 @@ import ts from 'typescript';
 const dir=await mkdtemp(join(tmpdir(),'courtside-api-test-'));
 let source=await readFile(new URL('../app/api/nba/route.ts',import.meta.url),'utf8');
 source=source.replace("import snapshot from '@/data/snapshot.json';",`import snapshot from ${JSON.stringify(pathToFileURL(resolve('data/snapshot.json')).href)} with {type:'json'};`);
+source=source.replace("import currentArchive from '@/data/archive/season-2026-27.json';",`import currentArchive from ${JSON.stringify(pathToFileURL(resolve('data/archive/season-2026-27.json')).href)} with {type:'json'};`);
 source=source.replace("from '@/lib/basketball'",`from ${JSON.stringify(pathToFileURL(resolve('lib/basketball.ts')).href)}`);
 source=source.replace("from '@/lib/boxscore'",`from ${JSON.stringify(pathToFileURL(resolve('lib/boxscore.ts')).href)}`);
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const path=join(dir,'api.mjs');await writeFile(path,compiled);const {GET,OPTIONS}=await import(pathToFileURL(path).href);
 const realFetch=globalThis.fetch;let calls=0;
-const payload=(headers,rowSet)=>Response.json({resultSets:[{headers,rowSet}]});
+const payload=(headers,rowSet,season='2025-26')=>Response.json({parameters:{LeagueID:'00',Season:season},resultSets:[{headers,rowSet}]});
 test('API rejects unknown endpoints, unsupported seasons and malformed ids before making requests',async()=>{globalThis.fetch=async()=>{throw Error('must not fetch')};for(const q of ['resource=https://evil.test','resource=players&season=2030-31','resource=boxscore&id=../../../etc/passwd'])assert.equal((await GET(new Request('https://test.invalid/api/nba?'+q))).status,400)});
 test('official base and advanced metrics merge by player id, with cache preventing repeated upstream work',async()=>{globalThis.fetch=async url=>{calls++;if(String(url).includes('MeasureType=Advanced'))return payload(['PLAYER_ID','TS_PCT','OFF_RATING','FGM','FGA'],[[2,.63,118,500,1000],[1,.58,111,600,1200]]);return payload(['PLAYER_ID','PLAYER_NAME','TEAM_ID','PTS','GP','FGM','FGA'],[[1,'One',1610612747,21,40,8,16],[2,'Two',1610612744,29,42,11,20]])};const req=()=>new Request('https://test.invalid/api/nba?resource=players&season=2025-26');const data=await(await GET(req())).json();assert.equal(data.stale,false);assert.equal(data.rows[0].PTS,21);assert.equal(data.rows[0].FGM,8);assert.equal(data.rows[0].FGA,16);assert.equal(data.rows[0].TS_PCT,.58);assert.equal(data.rows[1].TS_PCT,.63);assert.equal(data.source,'NBA.com');const n=calls;await GET(req());assert.equal(calls,n)});
 test('NBA outages retain verified snapshots and label them stale',async()=>{globalThis.fetch=async()=>{throw Error('upstream offline')};const data=await(await GET(new Request('https://test.invalid/api/nba?resource=standings&season=2024-25'))).json();assert.equal(data.stale,true);assert.equal(data.rows.length,30);assert.ok(data.updatedAt);assert.ok(data.warning)});
@@ -28,13 +29,13 @@ test('Pages can read the data service while unrelated origins and write prefligh
  const invalid=await GET(new Request(url+'?resource=unknown',{headers:{Origin:'https://cx300-fh.github.io'}}));assert.equal(invalid.status,400);assert.equal(invalid.headers.get('Access-Control-Allow-Origin'),'https://cx300-fh.github.io');
 });
 test('26–27 official basic statistics remain usable if the advanced feed is temporarily unavailable',async()=>{
- globalThis.fetch=async url=>String(url).includes('MeasureType=Advanced')?new Response('Unavailable',{status:503}):payload(['TEAM_ID','TEAM_NAME','GP','PTS','FGM'],[[1610612737,'Atlanta Hawks',1,132,44]]);
+ globalThis.fetch=async url=>String(url).includes('MeasureType=Advanced')?new Response('Unavailable',{status:503}):payload(['TEAM_ID','TEAM_NAME','GP','PTS','FGM'],[[1610612737,'Atlanta Hawks',1,132,44]],'2026-27');
  const response=await GET(new Request('https://test.invalid/api/nba?resource=teams&season=2026-27'));const data=await response.json();
  assert.equal(data.season,'2026-27');assert.equal(data.stale,false);assert.equal(data.rows[0].PTS,132);assert.equal(data.rows[0].FGM,44);assert.equal(data.rows[0].OFF_RATING,undefined);assert.ok(data.warning);
 });
 test('official shooting zones preserve missing values, zero attempts and overlapping corner totals',async()=>{
  const groups=['Restricted Area','Mid-Range','Left Corner 3','Right Corner 3','Corner 3'];
- globalThis.fetch=async url=>{assert.ok(String(url).includes('Season=2026-27'));assert.ok(String(url).includes('leaguedashplayershotlocations'));return Response.json({resultSets:{headers:[{columnNames:groups,columnsToSkip:4,columnSpan:3},{columnNames:['PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION']}],rowSet:[[1,'One',1610612737,'ATL',2,4,.5,0,0,0,null,null,null,1,2,.5,1,2,.5]]}})};
+ globalThis.fetch=async url=>{assert.ok(String(url).includes('Season=2026-27'));assert.ok(String(url).includes('leaguedashplayershotlocations'));return Response.json({parameters:{LeagueID:'00',Season:'2026-27'},resultSets:{headers:[{columnNames:groups,columnsToSkip:4,columnSpan:3},{columnNames:['PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION']}],rowSet:[[1,'One',1610612737,'ATL',2,4,.5,0,0,0,null,null,null,1,2,.5,1,2,.5]]}})};
  const data=await(await GET(new Request('https://test.invalid/api/nba?resource=shots&season=2026-27'))).json();
  assert.equal(data.stale,false);assert.equal(data.season,'2026-27');assert.equal(data.rows[0].zones[0].FG_PCT,.5);
  assert.deepEqual(data.rows[0].zones[1],{key:'midrange',label:'中距离',FGM:0,FGA:0,FG_PCT:null});
@@ -52,7 +53,7 @@ test('live scores expire after 15 seconds and an outage keeps the last verified 
  }finally{Date.now=originalNow}
 });
 test('an unexpectedly empty official table cannot erase an already verified season',async()=>{
- globalThis.fetch=async()=>payload(['PLAYER_ID','PLAYER_NAME','GP','PTS'],[]);
+ globalThis.fetch=async()=>payload(['PLAYER_ID','PLAYER_NAME','GP','PTS'],[],'2024-25');
  const data=await(await GET(new Request('https://test.invalid/api/nba?resource=players&season=2024-25'))).json();
  assert.equal(data.stale,true);assert.equal(data.rows.length,569);assert.ok(data.updatedAt);assert.ok(data.warning);
 });
@@ -95,5 +96,31 @@ test('mirrors reject future timestamps, untrusted sources and all-placeholder sc
    assert.equal(data.stale,true);assert.notEqual(data.updatedAt,mirrored.updatedAt);assert.equal(data.games.some(g=>g.gameId===fixture.gameId),false);
   }
  }finally{Date.now=originalNow}
+});
+test('official alternate Stats hosts must return the requested NBA league and season',async()=>{
+ const seen=[];
+ globalThis.fetch=async url=>{
+  seen.push(String(url));const parsed=new URL(url);
+  if(parsed.hostname==='stats.nba.com')return new Response('Forbidden',{status:403});
+  if(parsed.hostname==='stats.gleague.nba.com')return Response.json({parameters:{LeagueID:'20',Season:'2026-27'},resultSets:[{headers:['PERSON_ID'],rowSet:[[999]]}]});
+  if(parsed.hostname==='stats.wnba.com')return Response.json({parameters:{LeagueID:'00',Season:'2026-27'},resultSets:[{headers:['PERSON_ID','DISPLAY_FIRST_LAST'],rowSet:[[1631260,'AJ Green']]}]});
+  return new Response('Not found',{status:404});
+ };
+ const data=await(await GET(new Request('https://test.invalid/api/nba?resource=roster&season=2026-27'))).json();
+ assert.equal(data.stale,false);assert.equal(data.rows[0].PERSON_ID,1631260);assert.ok(seen.some(u=>u.startsWith('https://stats.wnba.com/')));assert.ok(seen.some(u=>u.startsWith('https://stats.gleague.nba.com/')));
+});
+test('wrong-season alternate data and older mirrors cannot replace newer verified statistics',async()=>{
+ const isolatedPath=join(dir,'freshness.mjs');await writeFile(isolatedPath,compiled);const {GET:isolatedGet}=await import(pathToFileURL(isolatedPath).href);
+ const snapshot=JSON.parse(await readFile(resolve('data/snapshot.json'),'utf8'));const expected=snapshot.seasons['2026-27'].standings;
+ globalThis.fetch=async url=>String(url).startsWith('https://raw.githubusercontent.com/')?Response.json({rows:[{TeamID:1610612737,WINS:0}],source:'NBA.com',season:'2026-27',updatedAt:'2026-10-20T08:50:00Z',stale:true}):Response.json({parameters:{LeagueID:'00',Season:'2025-26'},resultSets:[{headers:['TeamID','WINS'],rowSet:[[1610612737,999]]}]});
+ const data=await(await isolatedGet(new Request('https://test.invalid/api/nba?resource=standings&season=2026-27'))).json();
+ assert.equal(data.stale,true);assert.equal(data.updatedAt,expected.updatedAt);assert.deepEqual(data.rows,expected.rows);
+});
+test('current shooting-zone archive survives empty remote datasets without a refreshed timestamp',async()=>{
+ const isolatedPath=join(dir,'shots-archive.mjs');await writeFile(isolatedPath,compiled);const {GET:isolatedGet}=await import(pathToFileURL(isolatedPath).href);
+ const archive=JSON.parse(await readFile(resolve('data/archive/season-2026-27.json'),'utf8')).shots;
+ globalThis.fetch=async url=>String(url).startsWith('https://raw.githubusercontent.com/')?Response.json({rows:[],source:'NBA.com',season:'2026-27',updatedAt:new Date().toISOString(),stale:false}):Response.json({parameters:{LeagueID:'00',Season:'2026-27'},resultSets:{headers:[{columnsToSkip:4,columnSpan:3,columnNames:['Restricted Area']},{columnNames:['PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION']}],rowSet:[]}});
+ const data=await(await isolatedGet(new Request('https://test.invalid/api/nba?resource=shots&season=2026-27'))).json();
+ assert.equal(data.stale,true);assert.ok(data.rows.length>0);assert.equal(data.rows.length,archive.rows.length);assert.equal(data.updatedAt,archive.updatedAt);
 });
 test.after(async()=>{globalThis.fetch=realFetch;await rm(dir,{recursive:true,force:true})});

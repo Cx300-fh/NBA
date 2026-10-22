@@ -1,4 +1,5 @@
 import snapshot from '@/data/snapshot.json';
+import currentArchive from '@/data/archive/season-2026-27.json';
 import { TEAMS, type Envelope, type Game, type StatRow } from '@/lib/basketball';
 import { validateBoxscore } from '@/lib/boxscore';
 const seed=snapshot as any;
@@ -27,9 +28,28 @@ function cors(request:Request){
 const base={College:'',Conference:'',Country:'',DateFrom:'',DateTo:'',Division:'',DraftPick:'',DraftYear:'',GameScope:'',GameSegment:'',Height:'',LastNGames:'0',LeagueID:'00',Location:'',Month:'0',OpponentTeamID:'0',Outcome:'',PORound:'0',PaceAdjust:'N',PerMode:'PerGame',Period:'0',PlayerExperience:'',PlayerPosition:'',PlusMinus:'N',Rank:'N',SeasonSegment:'',SeasonType:'Regular Season',ShotClockRange:'',StarterBench:'',TeamID:'0',VsConference:'',VsDivision:'',Weight:''};
 const KEEP=new Set(['PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION','TEAM_NAME','GP','W','L','W_PCT','MIN','FGM','FGA','FG_PCT','FG3M','FG3A','FG3_PCT','FTM','FTA','FT_PCT','OREB','DREB','REB','AST','TOV','STL','BLK','PF','PTS','PLUS_MINUS','OFF_RATING','DEF_RATING','NET_RATING','AST_PCT','AST_TO','OREB_PCT','DREB_PCT','REB_PCT','TM_TOV_PCT','EFG_PCT','TS_PCT','USG_PCT','PACE','PIE']);
 const ADVANCED_KEYS=new Set(['OFF_RATING','DEF_RATING','NET_RATING','AST_PCT','AST_TO','OREB_PCT','DREB_PCT','REB_PCT','TM_TOV_PCT','EFG_PCT','TS_PCT','USG_PCT','PACE','PIE']);
-async function remote(url:string,text=false):Promise<any>{const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0',...(url.startsWith('https://stats.nba.com/')?{'Referer':'https://www.nba.com/','Origin':'https://www.nba.com'}:{})},cache:'no-store',signal:AbortSignal.timeout(url.startsWith('https://stats.nba.com/')?8000:5000)});if(!r.ok)throw Error(`数据源返回 ${r.status}`);return text?r.text():r.json();}
+async function remote(url:string,text=false):Promise<any>{
+ const officialStats=/^https:\/\/stats\.(?:nba\.com|wnba\.com|gleague\.nba\.com)\//.test(url);
+ const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0',...(officialStats?{'Referer':'https://www.nba.com/','Origin':'https://www.nba.com','Accept':'application/json, text/plain, */*'}:{})},cache:'no-store',signal:AbortSignal.timeout(5000)});
+ if(!r.ok)throw Error(`数据源返回 ${r.status}`);return text?r.text():r.json();
+}
+async function officialStats(endpoint:string,p:Record<string,string>){
+ if(p.LeagueID!=='00'||!SEASONS.has(p.Season))throw Error('仅允许受支持赛季的 NBA 数据');
+ const path='/stats/'+endpoint+'?'+new URLSearchParams(p);
+ const read=async(host:string)=>{
+  const data=await remote(host+path),parameters=data?.parameters;
+  if(parameters?.LeagueID!=='00'||(parameters.Season??parameters.SeasonYear)!==p.Season)throw Error('官方统计返回了其他联盟或赛季');
+  const sets=data.resultSets??data.resultSet,table=Array.isArray(sets)?sets[0]:sets;
+  if(!Array.isArray(table?.headers)||!Array.isArray(table?.rowSet))throw Error('官方统计格式发生变化');
+  return data;
+ };
+ try{return await read('https://stats.nba.com')}catch{}
+ // These are the league's own Stats services. LeagueID and season are checked before accepting either response.
+ return Promise.any(['https://stats.wnba.com','https://stats.gleague.nba.com'].map(read));
+}
+
 function toRows(data:any){const s=Array.isArray(data.resultSets)?data.resultSets[0]:data.resultSet;if(!s?.headers||!Array.isArray(s.rowSet))throw Error('数据源格式发生变化');return s.rowSet.map((r:any[])=>Object.fromEntries(s.headers.map((h:string,i:number)=>[h,r[i]])));}
-async function stats(endpoint:string,p:Record<string,string>){return toRows(await remote('https://stats.nba.com/stats/'+endpoint+'?'+new URLSearchParams(p)));}
+async function stats(endpoint:string,p:Record<string,string>){return toRows(await officialStats(endpoint,p));}
 function envelope(rows:StatRow[],url:string,season:string,source='NBA.com'):Envelope{return {rows,source,url,season,updatedAt:new Date().toISOString(),stale:false}}
 function norm(s:string){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')}
 function mirrorName(resource:string,season:string,id:string){return ['schedule','scoreboard'].includes(resource)?`${resource}.json`:resource==='boxscore'?`boxscore-${id}.json`:`${resource}-${season}.json`;}
@@ -104,7 +124,7 @@ async function load(resource:string,season:string,id:string):Promise<Envelope>{
 
  }
  if(resource==='shots'){
-  const data=await remote('https://stats.nba.com/stats/leaguedashplayershotlocations?'+new URLSearchParams({...base,Season:season,DistanceRange:'By Zone',PerMode:'Totals',MeasureType:'Base'}));
+  const data=await officialStats('leaguedashplayershotlocations',{...base,Season:season,DistanceRange:'By Zone',PerMode:'Totals',MeasureType:'Base'});
   const sets=data.resultSets??data.resultSet,table=Array.isArray(sets)?sets[0]:sets;
   const groups=table?.headers?.[0],columns=table?.headers?.[1];
   if(!Array.isArray(groups?.columnNames)||!Array.isArray(columns?.columnNames)||!Number.isInteger(groups.columnsToSkip)||!Number.isInteger(groups.columnSpan)||groups.columnSpan<3||!Array.isArray(table.rowSet))throw Error('官方投篮区域格式发生变化');
@@ -128,29 +148,33 @@ async function load(resource:string,season:string,id:string):Promise<Envelope>{
  }
  throw Error('未知数据集');
 }
-function fallback(resource:string,season:string,id:string):Envelope|undefined{return resource==='boxscore'?seed.boxes[id]:['players','teams','standings','bpm'].includes(resource)?seed.seasons[season]?.[resource]:seed[resource];}
+function fallback(resource:string,season:string,id:string):Envelope|undefined{if(resource==='shots'&&season==='2026-27')return currentArchive.shots;return resource==='boxscore'?seed.boxes[id]:['players','teams','standings','bpm'].includes(resource)?seed.seasons[season]?.[resource]:seed[resource];}
 async function getCached(resource:string,season:string,id:string):Promise<Envelope>{
  // Scores and the current schedule do not vary with the statistics season selector.
  const key=[resource,['scoreboard','schedule','boxscore'].includes(resource)?'':season,id].join(':');
  const hit=memo.get(key);if(hit&&hit.until>Date.now())return hit.value;const pending=inflight.get(key);if(pending)return pending;
+ const backup=fallback(resource,season,id);
+ const timestamp=(value:Envelope|undefined)=>value?.updatedAt&&Number.isFinite(Date.parse(value.updatedAt))?Date.parse(value.updatedAt):-Infinity;
+ const retained=timestamp(hit?.value)>=timestamp(backup)?hit?.value||backup:backup;
  const remember=(value:Envelope,ttl:number)=>{
   if(memo.size>=96&&!memo.has(key))memo.delete(memo.keys().next().value!);
   memo.set(key,{value,until:Date.now()+ttl});return value;
  };
  const promise=(async()=>{
   try{
-   const value=await load(resource,season,id),previous=hit?.value||fallback(resource,season,id);
+   const value=await load(resource,season,id),previous=retained;
    if(Array.isArray(value.rows)&&value.rows.length===0&&previous?.rows?.length)throw Error('官方统计暂未完整返回，保留上次核对的数据。');
    return remember(value,cacheTime(resource));
   }
   catch(error){
    try{
     const value=await mirrored(resource,season,id);
-    const previous=hit?.value||fallback(resource,season,id);
+    const previous=retained;
+    if(timestamp(value)<timestamp(previous))throw Error('保留更新时间更近的已核对数据');
     if(Array.isArray(value.rows)&&!value.rows.length&&previous?.rows?.length)throw Error('镜像统计暂未完整返回');
     return remember(value,LIVE_RESOURCES.has(resource)?15000:30000);
    }catch{}
-   const previous=hit?.value||fallback(resource,season,id);
+   const previous=retained;
    // Preserve the verified snapshot's timestamp. A failed attempt is never a fresh update.
    const value={...(previous||{rows:[],source:resource==='bpm'?'Basketball Reference':'NBA.com',season,updatedAt:null}),stale:true,warning:resource==='bpm'?'Basketball Reference 暂时拒绝自动请求。':String(error instanceof Error?error.message:error),attemptedAt:new Date().toISOString()};
    return remember(value,LIVE_RESOURCES.has(resource)?15000:30000);
