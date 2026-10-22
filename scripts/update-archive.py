@@ -170,19 +170,27 @@ def refresh(seasons,players,workers=8,force=False,refresh_current=False):
    if season in snapshot.get('seasons',{}):
     # Reuse already verified recent tables rather than downloading them twice.
     for resource in ['players','teams','standings','bpm']:
-     if resource in snapshot['seasons'][season]:file[resource]=normalize_recent_snapshot(snapshot['seasons'][season][resource],resource)
+     incoming=snapshot['seasons'][season].get(resource)
+     previous=file.get(resource)
+     if incoming and (incoming.get('rows') or not previous or not previous.get('rows')):
+      # A stale/empty snapshot must not erase a successful archive or make its
+      # timestamp look current. Reuse fresh recent tables to avoid duplicate work.
+      if not previous or not previous.get('rows') or (not incoming.get('stale') and (incoming.get('updatedAt') or '')>=(previous.get('updatedAt') or '')):file[resource]=normalize_recent_snapshot(incoming,resource)
    file.setdefault('bpm',{'rows':[],'source':'Basketball Reference','url':f'https://www.basketball-reference.com/leagues/NBA_{int(season[:4])+1}_advanced.html','season':season,'updatedAt':None,'stale':True,'warning':'No verified BPM archive; NBA impact metrics are not substituted for BPM.'})
    files[season]=file
    for resource,loader in [('players',lambda s=season:league_table('players',s)),('teams',lambda s=season:league_table('teams',s)),('standings',lambda s=season:standings(s)),('shots',lambda s=season:shooting_zones(s))]:
     previous=file.get(resource)
     good=bool(previous and (previous.get('rows') or previous.get('unavailable')) and not previous.get('stale'))
     if good and not force and not (refresh_current and int(season[:4])>=current_year and resource=='shots'):continue
-    if not force and resource in ['players','teams','standings'] and season in snapshot.get('seasons',{}):continue
+    recent=snapshot.get('seasons',{}).get(season,{}).get(resource,{})
+    if not force and resource in ['players','teams','standings'] and recent.get('rows') and not recent.get('stale'):continue
     jobs[pool.submit(loader)]=(season,resource)
   for future in concurrent.futures.as_completed(jobs):
    season,resource=jobs[future]
    try:
-    result=future.result();files[season][resource]=result;print(season,resource,len(result.get('rows',[])),flush=True)
+    result=future.result()
+    if not result.get('rows') and files[season].get(resource,{}).get('rows'):raise ValueError('NBA returned an empty table; retained the last verified archive')
+    files[season][resource]=result;print(season,resource,len(result.get('rows',[])),flush=True)
    except Exception as error:
     previous=files[season].get(resource);warning=str(error);warnings.append({'season':season,'resource':resource,'warning':warning})
     files[season][resource]={**(previous or {'rows':[],'source':'NBA.com','updatedAt':None}),'season':season,'stale':True,'attemptedAt':now(),'warning':warning}

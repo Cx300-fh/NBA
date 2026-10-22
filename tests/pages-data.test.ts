@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { staticDataPath, normalizeScheduledGame, fetchStaticDataset } from '../lib/data-client.ts';
+import { staticDataPath, normalizeScheduledGame, fetchStaticDataset, fetchDataset } from '../lib/data-client.ts';
 const realFetch = globalThis.fetch;
 test('static data files are scoped by resource, season and verified game id', () => {
   assert.equal(staticDataPath('players', '2025-26'), '/data/players-2025-26.json');
@@ -26,5 +26,21 @@ test('successful official boxscore access stays live and verifies game id', asyn
 });
 test('invalid static JSON fails instead of displaying malformed rows', async () => {
   globalThis.fetch=async()=>Response.json({html:'not a stats feed'});await assert.rejects(()=>fetchStaticDataset('teams','2025-26'));
+});
+test('current season statistics use the live service and retain its source timestamp',async()=>{
+ const calls:string[]=[];globalThis.fetch=async input=>{calls.push(String(input));return Response.json({season:'2026-27',rows:[{PLAYER_ID:1,PTS:31}],source:'NBA.com',updatedAt:'2026-10-22T06:02:00Z',stale:false})};
+ const result=await fetchDataset('players','2026-27');assert.equal(result.rows?.[0].PTS,31);assert.equal(result.updatedAt,'2026-10-22T06:02:00Z');assert.equal(result.stale,false);assert.deepEqual(calls,['/api/nba?resource=players&season=2026-27']);
+});
+test('a live service outage falls back to newer published statistics without changing their timestamp',async()=>{
+ globalThis.fetch=async input=>String(input).startsWith('/api/nba')?Response.json({season:'2026-27',rows:[],stale:true,updatedAt:'2026-10-21T06:00:00Z'}):Response.json({season:'2026-27',rows:[{PLAYER_ID:1,PTS:31}],source:'NBA.com',updatedAt:'2026-10-22T06:00:00Z'});
+ const result=await fetchDataset('players','2026-27');assert.equal(result.rows?.[0].PTS,31);assert.equal(result.updatedAt,'2026-10-22T06:00:00Z');assert.equal(result.stale,true);
+});
+test('a wrong season live response cannot be displayed as current season data',async()=>{
+ globalThis.fetch=async input=>String(input).startsWith('/api/nba')?Response.json({season:'2025-26',rows:[{PLAYER_ID:1,PTS:99}],stale:false}):Response.json({season:'2026-27',rows:[{PLAYER_ID:1,PTS:31}],updatedAt:'2026-10-22T06:00:00Z'});
+ const result=await fetchDataset('players','2026-27');assert.equal(result.rows?.[0].PTS,31);assert.equal(result.season,'2026-27');assert.equal(result.stale,true);
+});
+test('historical seasons stay local and current shooting areas have a validated archive fallback',async()=>{
+ const calls:string[]=[];globalThis.fetch=async input=>{calls.push(String(input));return Response.json({players:{rows:[{PLAYER_ID:23,PTS:30}],season:'1990-91'}})};
+ const result=await fetchDataset('players','1990-91');assert.equal(result.season,'1990-91');assert.deepEqual(calls,['/explore/archive/season-1990-91.json']);assert.equal(staticDataPath('shots','2026-27'),'/explore/archive/season-2026-27.json');
 });
 test.after(()=>{globalThis.fetch=realFetch});

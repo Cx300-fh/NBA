@@ -15,4 +15,8 @@ try{
   const response=await worker.dispatchFetch(base+path,{headers:{Origin:'https://cx300-fh.github.io'}});const body=await response.text();assert.equal(response.status,expected,path+': '+body.slice(0,300));assert.equal(response.headers.get('access-control-allow-origin'),'https://cx300-fh.github.io');console.log(path+': '+response.status);
  }
  const rootResponse=await worker.dispatchFetch(base+'/');assert.equal(rootResponse.status,200,'Server-rendered root failed: '+(await rootResponse.text()).slice(0,300));console.log('Server-rendered home: 200');
+ const preflight=await worker.dispatchFetch(base+'/api/nba?resource=players&season=2026-27',{method:'OPTIONS',headers:{Origin:'https://cx300-fh.github.io','Access-Control-Request-Method':'GET'}});
+ assert.equal(preflight.status,204);assert.equal(preflight.headers.get('access-control-allow-origin'),'https://cx300-fh.github.io');
+ const invalid=await worker.dispatchFetch(base+'/api/nba?resource=arbitrary-proxy',{headers:{Origin:'https://cx300-fh.github.io'}});assert.equal(invalid.status,400);assert.equal(invalid.headers.get('access-control-allow-origin'),'https://cx300-fh.github.io');
+ const denied=await worker.dispatchFetch(base+'/api/nba?resource=scoreboard',{headers:{Origin:'https://unrelated.example'}});assert.equal(denied.status,403);assert.equal(denied.headers.get('access-control-allow-origin'),null);console.log('Production NBA API routing and CORS: passed');
 }finally{await worker.dispose()}

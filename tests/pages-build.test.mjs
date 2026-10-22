@@ -9,6 +9,11 @@ test('Pages HTML uses the /NBA/ project prefix for scripts, styles and favicon',
  assert.ok(refs.some(s=>s.endsWith('.js')));assert.ok(refs.some(s=>s.endsWith('.css')));
  for(const ref of refs){assert.ok(ref.startsWith('/NBA/'),ref);await access(root+'/'+ref.slice('/NBA/'.length))}
 });
+test('Pages bundle connects to the deployed NBA service for current data',async()=>{
+ const files=(await readdir(root+'/assets')).filter(x=>x.endsWith('.js'));
+ const bundle=(await Promise.all(files.map(file=>readFile(root+'/assets/'+file,'utf8')))).join('\n');
+ const config=JSON.parse(await readFile('data/nba-service.json','utf8'));assert.equal(new URL(config.apiBase).protocol,'https:');assert.ok(bundle.includes(config.apiBase));assert.ok(bundle.includes('2026-27'));
+});
 test('poster assets and locally hosted fonts are published',async()=>{
  for(const p of ['images/hero.jpg','images/curry.jpg','images/lebron.jpg','images/wembanyama.jpg','images/tatum.jpg','images/doncic.jpg','images/jokic.jpg','images/giannis.jpg','images/edwards.jpg','images/brunson.jpg','fonts/display-800.ttf','favicon.svg','.nojekyll','404.html'])await access(root+'/'+p);
  const cssFiles=(await readdir(root+'/assets')).filter(x=>x.endsWith('.css'));

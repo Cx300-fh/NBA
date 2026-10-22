@@ -5,7 +5,7 @@ import argparse, concurrent.futures, datetime as dt, html, json, re, time, unico
 from pathlib import Path
 from urllib.parse import urlencode
 ROOT=Path(__file__).resolve().parents[1]
-HEADERS={'User-Agent':'Mozilla/5.0','Referer':'https://www.nba.com/','Origin':'https://www.nba.com'}
+HEADERS={'User-Agent':'Mozilla/5.0','Referer':'https://www.nba.com/','Origin':'https://www.nba.com','Cache-Control':'no-cache','Accept':'application/json,text/html;q=0.9,*/*;q=0.8'}
 KEEP={'PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION','TEAM_NAME','GP','W','L','W_PCT','MIN','FGM','FGA','FG_PCT','FG3M','FG3A','FG3_PCT','FTM','FTA','FT_PCT','OREB','DREB','REB','AST','TOV','STL','BLK','PF','PTS','PLUS_MINUS','OFF_RATING','DEF_RATING','NET_RATING','AST_PCT','AST_TO','OREB_PCT','DREB_PCT','REB_PCT','TM_TOV_PCT','EFG_PCT','TS_PCT','USG_PCT','PACE','PIE'}
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def get(url):
@@ -17,6 +17,7 @@ def get(url):
    time.sleep(.3)
 def rows(text):
  data=json.loads(text);sets=data.get('resultSets',data.get('resultSet',[]));sets=[sets] if isinstance(sets,dict) else sets
+ if not sets or not isinstance(sets[0].get('headers'),list) or not isinstance(sets[0].get('rowSet'),list):raise ValueError('NBA table format changed')
  return [dict(zip(sets[0]['headers'],r)) for r in sets[0]['rowSet']]
 def params(season,measure='Base'):
  return dict(College='',Conference='',Country='',DateFrom='',DateTo='',Division='',DraftPick='',DraftYear='',GameScope='',GameSegment='',Height='',LastNGames=0,LeagueID='00',Location='',MeasureType=measure,Month=0,OpponentTeamID=0,Outcome='',PORound=0,PaceAdjust='N',PerMode='PerGame',Period=0,PlayerExperience='',PlayerPosition='',PlusMinus='N',Rank='N',Season=season,SeasonSegment='',SeasonType='Regular Season',ShotClockRange='',StarterBench='',TeamID=0,VsConference='',VsDivision='',Weight='')
@@ -51,15 +52,31 @@ def boxscore(gid):
 def normalize_game(g):
  def t(x):return {k:x.get(k) for k in ['teamId','teamName','teamCity','teamTricode','score','wins','losses']}
  return {'gameId':g['gameId'],'gameStatus':g['gameStatus'],'gameStatusText':g['gameStatusText'],'gameTimeUTC':g.get('gameDateTimeUTC',g.get('gameTimeUTC')),'homeTeam':t(g['homeTeam']),'awayTeam':t(g['awayTeam']),'arenaName':g.get('arenaName',''),'gameLabel':g.get('gameLabel','')}
+def refresh_resource(key,job,fallback,errors):
+ """Keep the last verified result when a source fails or unexpectedly becomes empty."""
+ try:
+  result=job()
+  for collection in ['rows','games']:
+   if collection not in result:continue
+   if not isinstance(result[collection],list):raise ValueError('NBA collection format changed')
+   if (collection=='rows' or key=='schedule') and not result[collection] and fallback and fallback.get(collection):raise ValueError('NBA returned an empty table; retained the last verified data')
+  print(key,len(result.get('rows',result.get('games',[]))),flush=True)
+  return result
+ except Exception as error:
+  warning=str(error);errors.append({'dataset':key,'error':warning,'attemptedAt':now()});print(key,warning,flush=True)
+  return {**(fallback or {'rows':[],'updatedAt':None}),'stale':True,'warning':warning,'attemptedAt':now()}
+def bpm_fallback(season,previous):
+ """A separately verified same-season archive is preferable to missing BPM values."""
+ try:archived=json.loads((ROOT/f'data/archive/season-{season}.json').read_text()).get('bpm')
+ except (OSError,json.JSONDecodeError):archived=None
+ if not archived or archived.get('season')!=season or archived.get('source')!='Basketball Reference' or not archived.get('rows'):return previous
+ if not previous or not previous.get('rows') or (archived.get('updatedAt') or '')>(previous.get('updatedAt') or ''):return archived
+ return previous
 def refresh(seasons):
  target=ROOT/'data/snapshot.json';old=json.loads(target.read_text()) if target.exists() else {'seasons':{},'boxes':{}};errors=[]
- def keep(key,job,fallback):
-  try:
-   r=job();print(key,len(r.get('rows',r.get('games',[]))),flush=True);return r
-  except Exception as e:
-   errors.append({'dataset':key,'error':str(e),'attemptedAt':now()});print(key,str(e),flush=True)
-   return {**fallback,'stale':True,'warning':str(e),'attemptedAt':now()} if fallback else {'rows':[],'stale':True,'warning':str(e),'updatedAt':None,'attemptedAt':now()}
- out={'updatedAt':now(),'seasons':{},'boxes':old.get('boxes',{})}
+ def keep(key,job,fallback):return refresh_resource(key,job,fallback,errors)
+ # A targeted current-season refresh must not discard older snapshots.
+ out={'updatedAt':now(),'seasons':dict(old.get('seasons',{})),'boxes':old.get('boxes',{})}
  jobs={}
  with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
   for season in seasons:
@@ -69,7 +86,7 @@ def refresh(seasons):
     jobs[ex.submit(keep,kind+' '+season,job,old.get('seasons',{}).get(season,{}).get(kind))]=(season,kind)
   for f in concurrent.futures.as_completed(jobs):s,k=jobs[f];out['seasons'][s][k]=f.result()
  for season in seasons:
-  prev=old.get('seasons',{}).get(season,{}).get('bpm')
+  prev=bpm_fallback(season,old.get('seasons',{}).get(season,{}).get('bpm'))
   out['seasons'][season]['bpm']=keep('bpm '+season,lambda s=season:bpm(s,out['seasons'][s]['players']['rows']),prev)
   out['seasons'][season]['bpm'].update({'source':'Basketball Reference','url':f'https://www.basketball-reference.com/leagues/NBA_{int(season[:4])+1}_advanced.html','season':season})
  def schedule():
@@ -77,7 +94,8 @@ def refresh(seasons):
   return {'games':[normalize_game(g) for day in raw['gameDates'] for g in day['games']],'season':raw['seasonYear'],'source':'NBA.com','url':'https://www.nba.com/schedule','updatedAt':now(),'stale':False}
  out['schedule']=keep('schedule',schedule,old.get('schedule'))
  out['scoreboard']=keep('scoreboard',lambda:{**json.loads(get('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json'))['scoreboard'],'source':'NBA.com','updatedAt':now(),'stale':False},old.get('scoreboard'))
- out['roster']=keep('roster',lambda:pack(stats('commonallplayers',{'LeagueID':'00','Season':seasons[-1],'IsOnlyCurrentSeason':1}),'NBA.com','https://www.nba.com/players',seasons[-1]),old.get('roster'))
+ current=max(seasons,key=lambda season:int(season[:4]))
+ out['roster']=keep('roster',lambda:pack(stats('commonallplayers',{'LeagueID':'00','Season':current,'IsOnlyCurrentSeason':1}),'NBA.com','https://www.nba.com/players',current),old.get('roster'))
  cutoff=dt.datetime.now(dt.timezone.utc)-dt.timedelta(days=14)
  recent=[g for g in out['schedule'].get('games',[]) if g['gameStatus'] in [2,3] and g['gameTimeUTC'] and dt.datetime.fromisoformat(g['gameTimeUTC'].replace('Z','+00:00'))>cutoff]
  # Keep completed boxes; revisit live, failed or missing games across the whole recent window.
@@ -85,7 +103,8 @@ def refresh(seasons):
  with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
   futures={ex.submit(keep,'box '+g['gameId'],lambda gid=g['gameId']:boxscore(gid),out['boxes'].get(g['gameId'])):g['gameId'] for g in recent}
   for f,gid in futures.items():out['boxes'][gid]=f.result()
- out['errors']=errors;target.write_text(json.dumps(out,ensure_ascii=False,separators=(',',':'))+'\n');print('Saved',target.stat().st_size,'bytes;',len(errors),'source warnings')
  if not any(x['players']['rows'] for x in out['seasons'].values()):raise SystemExit('No valid player data; refusing a silent empty snapshot')
+ # Write only after validation, and replace atomically so interruption cannot truncate a snapshot.
+ out['errors']=errors;temporary=target.with_suffix('.json.tmp');temporary.write_text(json.dumps(out,ensure_ascii=False,separators=(',',':'),allow_nan=False)+'\n');temporary.replace(target);print('Saved',target.stat().st_size,'bytes;',len(errors),'source warnings')
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--seasons',nargs='+',default=['2024-25','2025-26','2026-27']);args=parser.parse_args();refresh(args.seasons)
