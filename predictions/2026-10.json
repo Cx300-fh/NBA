@@ -1,7 +1,7 @@
 {
   "version": 1,
   "month": "2026-10",
-  "updatedAt": "2026-10-20T12:38:21.274Z",
+  "updatedAt": "2026-10-22T20:36:30.890842+00:00",
   "predictions": [
     {
       "gameId": "0022600001",
@@ -10,7 +10,13 @@
       "awayTeamId": 1610612738,
       "pickedTeamId": 1610612738,
       "createdAt": "2026-10-20T12:38:01.354Z",
-      "updatedAt": "2026-10-20T12:38:01.354Z"
+      "updatedAt": "2026-10-20T12:38:01.354Z",
+      "result": {
+        "winnerTeamId": 1610612765,
+        "homeScore": 121,
+        "awayScore": 113,
+        "settledAt": "2026-10-22T20:36:30.890842+00:00"
+      }
     },
     {
       "gameId": "0022600002",
@@ -19,7 +25,13 @@
       "awayTeamId": 1610612755,
       "pickedTeamId": 1610612755,
       "createdAt": "2026-10-20T12:38:21.274Z",
-      "updatedAt": "2026-10-20T12:38:21.274Z"
+      "updatedAt": "2026-10-20T12:38:21.274Z",
+      "result": {
+        "winnerTeamId": 1610612755,
+        "homeScore": 100,
+        "awayScore": 106,
+        "settledAt": "2026-10-22T20:36:30.890842+00:00"
+      }
     },
     {
       "gameId": "0022600003",
@@ -28,7 +40,13 @@
       "awayTeamId": 1610612760,
       "pickedTeamId": 1610612759,
       "createdAt": "2026-10-20T12:33:13.547Z",
-      "updatedAt": "2026-10-20T12:33:13.547Z"
+      "updatedAt": "2026-10-20T12:33:13.547Z",
+      "result": {
+        "winnerTeamId": 1610612760,
+        "homeScore": 104,
+        "awayScore": 116,
+        "settledAt": "2026-10-22T20:36:30.890842+00:00"
+      }
     }
   ]
 }
