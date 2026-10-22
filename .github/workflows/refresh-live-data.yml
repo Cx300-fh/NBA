@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths:
       - scripts/update-live-data.py
+      - tests/accounts.test.mjs
+      - tests/api.test.mjs
       - lib/data-client.ts
       - app/api/nba/route.ts
       - lib/account-server.ts
