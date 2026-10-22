@@ -8,6 +8,7 @@ import ts from 'typescript';
 const dir=await mkdtemp(join(tmpdir(),'courtside-api-test-'));
 let source=await readFile(new URL('../app/api/nba/route.ts',import.meta.url),'utf8');
 source=source.replace("import snapshot from '@/data/snapshot.json';",`import snapshot from ${JSON.stringify(pathToFileURL(resolve('data/snapshot.json')).href)} with {type:'json'};`);
+source=source.replace("from '@/lib/basketball'",`from ${JSON.stringify(pathToFileURL(resolve('lib/basketball.ts')).href)}`);
 source=source.replace("from '@/lib/boxscore'",`from ${JSON.stringify(pathToFileURL(resolve('lib/boxscore.ts')).href)}`);
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const path=join(dir,'api.mjs');await writeFile(path,compiled);const {GET,OPTIONS}=await import(pathToFileURL(path).href);
@@ -45,14 +46,54 @@ test('live scores expire after 15 seconds and an outage keeps the last verified 
  try{
   globalThis.fetch=async()=>{requests++;return Response.json({scoreboard:{gameDate:'2026-10-21',games:[]}})};
   const request=()=>new Request('https://test.invalid/api/nba?resource=scoreboard&season=2026-27');
-  const first=await(await GET(request())).json();clock+=14999;await GET(request());assert.equal(requests,1);
+  const first=await(await GET(request())).json(),cachedRequests=requests;clock+=14999;await GET(request());assert.equal(requests,cachedRequests);
   clock+=2;globalThis.fetch=async()=>{requests++;throw Error('offline')};const stale=await(await GET(request())).json();
-  assert.equal(requests,2);assert.equal(stale.stale,true);assert.equal(stale.updatedAt,first.updatedAt);assert.ok(stale.attemptedAt);assert.deepEqual(stale.games,[]);
+  assert.ok(requests>cachedRequests);assert.equal(stale.stale,true);assert.equal(stale.updatedAt,first.updatedAt);assert.ok(stale.attemptedAt);assert.deepEqual(stale.games,[]);
  }finally{Date.now=originalNow}
 });
 test('an unexpectedly empty official table cannot erase an already verified season',async()=>{
  globalThis.fetch=async()=>payload(['PLAYER_ID','PLAYER_NAME','GP','PTS'],[]);
  const data=await(await GET(new Request('https://test.invalid/api/nba?resource=players&season=2024-25'))).json();
  assert.equal(data.stale,true);assert.equal(data.rows.length,569);assert.ok(data.updatedAt);assert.ok(data.warning);
+});
+test('ESPN scores use uniquely matched official NBA ids and NBA team codes, never provider ids',async()=>{
+ const originalNow=Date.now;Date.now=()=>originalNow()+3600000;
+ try{
+  const time='2026-10-22T23:00:00Z';
+  const fixture=(gameId,home,away)=>({gameId,gameStatus:1,gameStatusText:'Scheduled',gameDateTimeUTC:time,homeTeam:{teamId:home,teamTricode:'HOME',teamName:'Home',teamCity:'Home',score:null},awayTeam:{teamId:away,teamTricode:'AWAY',teamName:'Away',teamCity:'Away',score:null}});
+  const fixtures=[fixture('0022601001',1610612744,1610612752),fixture('0022601002',1610612740,1610612759),fixture('0022601003',1610612762,1610612756)];
+  const event=(id,home,away,date=time)=>({id,date,competitions:[{date,competitors:[{homeAway:'home',team:{id:'espn-home',abbreviation:home},score:'98'},{homeAway:'away',team:{id:'espn-away',abbreviation:away},score:'90'}],status:{type:{state:'in',completed:false,shortDetail:'4:20 - 4th'}}}]});
+  const events=[event('401000001','GS','NY'),event('401000002','NO','SA'),event('401000003','UTAH','PHO'),event('401000004','NY','GS'),event('401000005','GS','NY','2026-10-24T23:00:00Z'),event('401000006','XXX','NY')];
+  globalThis.fetch=async url=>String(url).includes('site.api.espn.com')?Response.json({day:{date:'2026-10-22'},events}):String(url).includes('scheduleLeagueV2_1')?Response.json({leagueSchedule:{seasonYear:'2026-27',gameDates:[{games:fixtures}]}}):new Response('Forbidden',{status:403});
+  const data=await(await GET(new Request('https://test.invalid/api/nba?resource=scoreboard&season=2026-27'))).json();
+  assert.equal(data.source,'ESPN');assert.equal(data.stale,false);assert.equal(data.gameDate,'2026-10-22');assert.equal(data.games.length,3);
+  assert.deepEqual(data.games.map(g=>g.gameId),fixtures.map(g=>g.gameId));assert.equal(data.games[0].homeTeam.teamId,1610612744);assert.equal(data.games[0].homeTeam.score,98);assert.equal(data.games[0].gameStatus,2);assert.ok(data.games[0].url.includes('401000001'));
+ }finally{Date.now=originalNow}
+});
+test('remote NBA mirrors keep their collection time and clearly label game snapshots',async()=>{
+ const originalNow=Date.now;Date.now=()=>originalNow()+7200000;
+ try{
+  const updatedAt=new Date(Date.now()-120000).toISOString();
+  const fixture={gameId:'0022601010',gameStatus:1,gameStatusText:'Scheduled',gameTimeUTC:'2026-10-22T23:00:00Z',homeTeam:{teamId:1610612744},awayTeam:{teamId:1610612752}};
+  const games=[fixture,{...fixture,gameId:'0032600001',homeTeam:{teamId:0}},{...fixture,gameStatus:0},{...fixture,awayTeam:fixture.homeTeam},{...fixture,gameTimeUTC:'TBD'}];
+  globalThis.fetch=async url=>String(url).endsWith('/schedule.json')?Response.json({games,source:'NBA.com',season:'2026',updatedAt,stale:false}):new Response('Forbidden',{status:403});
+  const data=await(await GET(new Request('https://test.invalid/api/nba?resource=schedule&season=2026-27'))).json();
+  assert.equal(data.stale,true);assert.equal(data.updatedAt,updatedAt);assert.equal(data.refreshIntervalSeconds,300);assert.ok(data.warning.includes('5 分钟'));assert.equal(data.games[0].gameId,'0022601010');assert.equal(data.games.length,1);
+ }finally{Date.now=originalNow}
+});
+test('mirrors reject future timestamps, untrusted sources and all-placeholder schedules',async()=>{
+ const originalNow=Date.now;let clock=originalNow()+10800000;Date.now=()=>clock;
+ try{
+  const fixture={gameId:'0022601100',gameStatus:1,gameTimeUTC:'2026-10-22T23:00:00Z',homeTeam:{teamId:1610612744},awayTeam:{teamId:1610612752}};
+  for(const patch of [{updatedAt:new Date(clock+120000).toISOString()},{source:'Unverified feed'},{games:[{...fixture,homeTeam:{teamId:0}}]}]){
+   clock+=3600000;
+   const mirrored={games:[fixture],source:'NBA.com',updatedAt:new Date(clock).toISOString(),stale:false,...patch};
+   // Keep the future-date case ahead of the updated test clock.
+   if('updatedAt' in patch)mirrored.updatedAt=new Date(clock+120000).toISOString();
+   globalThis.fetch=async url=>String(url).endsWith('/schedule.json')?Response.json(mirrored):new Response('Forbidden',{status:403});
+   const data=await(await GET(new Request('https://test.invalid/api/nba?resource=schedule&season=2026-27'))).json();
+   assert.equal(data.stale,true);assert.notEqual(data.updatedAt,mirrored.updatedAt);assert.equal(data.games.some(g=>g.gameId===fixture.gameId),false);
+  }
+ }finally{Date.now=originalNow}
 });
 test.after(async()=>{globalThis.fetch=realFetch;await rm(dir,{recursive:true,force:true})});

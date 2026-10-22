@@ -1,0 +1,45 @@
+name: Refresh live NBA feeds
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/update-live-data.py
+      - scripts/update-data.py
+      - scripts/update-archive.py
+      - .github/workflows/refresh-live-data.yml
+permissions:
+  contents: write
+concurrency:
+  group: nba-live-feeds
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check feed safety and data integrity
+        run: python tests/data.test.py
+      - name: Refresh current-season feeds
+        run: python scripts/update-live-data.py --season 2026-27
+      - name: Commit only live feeds
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/live/
+          if ! git diff --staged --quiet; then
+            git commit -m 'data: refresh live NBA feeds'
+            for attempt in 1 2 3; do
+              if git push; then exit 0; fi
+              git pull --rebase origin main
+            done
+            exit 1
+          fi

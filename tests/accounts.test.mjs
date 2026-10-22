@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {generateKeyPairSync,sign} from 'node:crypto';
-import {createAccountHandler,passwordMatches,normalizedUsername,verifyArchiveToken,ARCHIVE_AUDIENCE} from '../lib/account-server.ts';
+import {createAccountHandler,passwordMatches,normalizedUsername,verifyArchiveToken,officialSchedule,ARCHIVE_AUDIENCE} from '../lib/account-server.ts';
 const password='Courtside-test-2026!';
 function fixture(){
  const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');sqlite.exec(readFileSync(new URL('../drizzle/0000_ambiguous_random.sql',import.meta.url),'utf8'));
@@ -49,6 +49,27 @@ test('updating a pick preserves creation time; final scores settle only a matchi
  const changed=await submit(f.game.awayTeam.teamId);assert.equal(changed.data.file.predictions[0].createdAt,original);assert.notEqual(changed.data.file.predictions[0].updatedAt,original);
  f.game.gameStatus=3;f.game.homeTeam.score=103;f.game.awayTeam.score=110;f.setTime(Date.parse('2090-10-21T03:00:00Z'));
  const ended=await f.call('predictions?month=2090-10',{token:a.token});assert.equal(ended.data.file.predictions[0].result.winnerTeamId,f.game.awayTeam.teamId);assert.equal((await submit(f.game.homeTeam.teamId)).status,409);
+});
+test('a blocked NBA connection uses only a fresh same-season trusted schedule mirror',async()=>{
+ const now=Date.parse('2026-10-22T16:00:00Z');
+ const game={gameId:'0022600001',gameStatus:1,gameStatusText:'7:00 PM ET',gameTimeUTC:'2026-10-23T00:00:00Z',homeTeam:{teamId:1610612747,score:0},awayTeam:{teamId:1610612744,score:0}};
+ const mirror={source:'NBA.com',season:'2026-27',stale:false,updatedAt:new Date(now-60000).toISOString(),games:[game]};
+ const calls=[];const fetcher=async(url,options)=>{calls.push(String(url));assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');return String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json(mirror)};
+ const games=await officialSchedule(true,{now:()=>now,fetcher});assert.equal(games[0].gameId,game.gameId);assert.equal(games[0].gameTimeUTC,game.gameTimeUTC);assert.deepEqual(calls,['https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json','https://raw.githubusercontent.com/Cx300-fh/NBA/main/data/live/schedule.json']);
+ for(const patch of [{stale:true},{updatedAt:new Date(now-15*60000-1).toISOString()},{updatedAt:new Date(now+60001).toISOString()},{source:'Unknown'},{season:'2025-26'},{games:[{...game,gameId:'0022500001'}]},{games:[{...game,gameTimeUTC:'2025-10-23T00:00:00Z'}]},{games:[game,game]},{games:[{...game,homeTeam:{teamId:1610612747,score:-1}}]}]){
+  const failure=async url=>String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json({...mirror,...patch});
+  await assert.rejects(officialSchedule(true,{now:()=>now,fetcher:failure}),error=>error.status===503);
+ }
+});
+test('settlement ignores a final result with the same ID and teams but a wrong game date',async()=>{
+ const f=fixture();const a=await f.register('DateCheck');
+ assert.equal((await f.call('predictions',{token:a.token,body:{gameId:f.game.gameId,pickedTeamId:f.game.homeTeam.teamId}})).status,200);
+ f.setTime(Date.parse('2090-10-23T03:00:00Z'));
+ const final={...f.game,gameStatus:3,gameTimeUTC:'2090-10-22T00:00:00Z',homeTeam:{...f.game.homeTeam,score:110},awayTeam:{...f.game.awayTeam,score:103}};
+ f.setSchedule(async()=>[final]);
+ const wrong=await f.call('predictions?month=2090-10',{token:a.token});assert.equal(wrong.data.file.predictions[0].result,undefined);
+ f.setSchedule(async()=>[{...final,gameTimeUTC:f.game.gameTimeUTC}]);
+ const correct=await f.call('predictions?month=2090-10',{token:a.token});assert.equal(correct.data.file.predictions[0].result.winnerTeamId,f.game.homeTeam.teamId);
 });
 test('password changes revoke all older sessions and validate the old password first',async()=>{
  const f=fixture();const a=await f.register('Player_A');const b=await f.call('login',{body:{username:'Player_A',password}});

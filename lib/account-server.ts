@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from 'node:crypto';
 import { emptyMonth, gamePhase, predictionMonth, type Prediction, type PredictionMonth } from './predictions.ts';
-import type { Game } from './basketball.ts';
+import { beijingDate, SEASONS, type Game } from './basketball.ts';
 export const ACCOUNT_ORIGIN='https://courtside-nba-cx300.pastelsong512.chatgpt.site';
 export const PAGES_ORIGIN='https://cx300-fh.github.io';
 export const ARCHIVE_AUDIENCE='courtside-prediction-archive';
@@ -48,14 +48,45 @@ async function body(request:Request){
  try{const v=JSON.parse(new TextDecoder().decode(bytes));if(!v||typeof v!=='object'||Array.isArray(v))throw Error();return v as Record<string,unknown>}catch{throw new ApiError(400,'无效的请求内容')}
 }
 let scheduleMemo:{games:Game[];until:number}|undefined;
-export async function officialSchedule(fresh=false):Promise<Game[]>{
- if(!fresh&&scheduleMemo&&scheduleMemo.until>Date.now())return scheduleMemo.games;
- const r=await fetch('https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json',{signal:AbortSignal.timeout(12000),cache:'no-store'});
- if(!r.ok)throw new ApiError(503,'赛程核对暂不可用，请稍后重试');
- const data=await r.json() as any;
- if(!Array.isArray(data.leagueSchedule?.gameDates))throw new ApiError(503,'赛程核对暂不可用');
- const games=data.leagueSchedule.gameDates.flatMap((d:any)=>Array.isArray(d.games)?d.games:[]).map((g:any)=>({gameId:g.gameId,gameStatus:g.gameStatus,gameStatusText:g.gameStatusText||'',gameTimeUTC:g.gameDateTimeUTC,homeTeam:g.homeTeam,awayTeam:g.awayTeam})).filter((g:Game)=>/^00\d{8}$/.test(g.gameId)&&g.homeTeam?.teamId&&g.awayTeam?.teamId&&Number.isFinite(Date.parse(g.gameTimeUTC)));
- if(!games.length)throw new ApiError(503,'赛程核对暂不可用');scheduleMemo={games,until:Date.now()+60000};return games;
+const SCHEDULE_MIRROR='https://raw.githubusercontent.com/Cx300-fh/NBA/main/data/live/schedule.json';
+const SCHEDULE_MAX_AGE=15*60000;
+function seasonAt(time:string){const date=new Date(time);if(!Number.isFinite(date.getTime()))return '';const year=date.getUTCFullYear()-(date.getUTCMonth()<6?1:0);return `${year}-${String((year+1)%100).padStart(2,'0')}`;}
+function verifiedSchedule(games:unknown,season:string):Game[]{
+ if(!Array.isArray(games)||!games.length||season!==SEASONS[0])throw Error('赛程格式不正确');
+ const ids=new Set<string>();const verified:Game[]=[];
+ for(const raw of games){
+  if(!raw||typeof raw!=='object'||typeof raw.gameId!=='string'||!/^00\d{8}$/.test(raw.gameId)||raw.gameId.slice(3,5)!==season.slice(2,4)||ids.has(raw.gameId))throw Error('赛程比赛标识不正确');
+  ids.add(raw.gameId);
+  // NBA Cup placeholders have no teams or fixed start time yet and cannot accept picks.
+  const team=(value:any)=>value&&Number.isInteger(value.teamId)&&value.teamId>=1610612737&&value.teamId<=1610612766;
+  if(!team(raw.homeTeam)||!team(raw.awayTeam))continue;
+  const time=raw.gameDateTimeUTC||raw.gameTimeUTC;
+  if(typeof time!=='string'||!Number.isFinite(Date.parse(time)))continue;
+  if(raw.homeTeam.teamId===raw.awayTeam.teamId||![1,2,3].includes(raw.gameStatus)||seasonAt(time)!==season)throw Error('赛程时间或球队不正确');
+  for(const value of [raw.homeTeam.score,raw.awayTeam.score])if(value!=null&&(!Number.isInteger(value)||value<0||value>500))throw Error('比分格式不正确');
+  verified.push({gameId:raw.gameId,gameStatus:raw.gameStatus,gameStatusText:typeof raw.gameStatusText==='string'?raw.gameStatusText:'',gameTimeUTC:time,homeTeam:raw.homeTeam,awayTeam:raw.awayTeam});
+ }
+ if(!verified.length)throw Error('赛程没有可核对的比赛');return verified;
+}
+export async function officialSchedule(fresh=false,options:{now?:()=>number;fetcher?:typeof fetch}={}):Promise<Game[]>{
+ const now=options.now||Date.now,fetcher=options.fetcher||fetch;
+ if(!fresh&&!options.fetcher&&scheduleMemo&&scheduleMemo.until>now())return scheduleMemo.games;
+ let games:Game[];let verifiedUntil=now()+60000;
+ try{
+  const r=await fetcher('https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json',{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'error'});
+  if(!r.ok)throw Error('NBA赛程暂不可用');
+  const data=await r.json() as any;if(!Array.isArray(data.leagueSchedule?.gameDates))throw Error('NBA赛程格式不正确');
+  games=verifiedSchedule(data.leagueSchedule.gameDates.flatMap((day:any)=>Array.isArray(day.games)?day.games:[]),data.leagueSchedule.seasonYear);
+ }catch{
+  try{
+   const r=await fetcher(SCHEDULE_MIRROR,{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'error'});
+   if(!r.ok)throw Error('赛程备份暂不可用');
+   const data=await r.json() as any,updated=Date.parse(data.updatedAt||'');
+   if(data.source!=='NBA.com'||data.stale!==false||!Number.isFinite(updated)||updated>now()+60000||now()-updated>SCHEDULE_MAX_AGE)throw Error('赛程备份已过期');
+   games=verifiedSchedule(data.games,data.season);verifiedUntil=Math.min(verifiedUntil,updated+SCHEDULE_MAX_AGE);
+  }catch{throw new ApiError(503,'赛程核对暂不可用，请稍后重试')}
+ }
+ if(!options.fetcher)scheduleMemo={games,until:Math.min(verifiedUntil,now()+60000)};return games;
 }
 let githubKeys:{keys:JsonWebKey[];until:number}|undefined;
 export async function verifyArchiveToken(token:string,now=Date.now(),fetcher:typeof fetch=fetch){
@@ -93,7 +124,7 @@ export function createAccountHandler(db:D1Database|undefined,options:{now?:()=>n
   let games:Game[];try{games=await schedule(false)}catch{return rows}
   const byId=new Map(games.map(g=>[g.gameId,g]));
   const statements:D1PreparedStatement[]=[];
-  for(const row of pending){const game=byId.get(row.game_id);if(!game||game.gameStatus!==3||game.homeTeam.teamId!==row.home_team_id||game.awayTeam.teamId!==row.away_team_id||game.homeTeam.score==null||game.awayTeam.score==null||!Number.isInteger(game.homeTeam.score)||!Number.isInteger(game.awayTeam.score)||game.homeTeam.score===game.awayTeam.score||game.homeTeam.score<0||game.awayTeam.score<0)continue;
+  for(const row of pending){const game=byId.get(row.game_id);if(!game||game.gameStatus!==3||game.homeTeam.teamId!==row.home_team_id||game.awayTeam.teamId!==row.away_team_id||!Number.isFinite(Date.parse(game.gameTimeUTC))||Date.parse(game.gameTimeUTC)>=now()||seasonAt(game.gameTimeUTC)!==seasonAt(row.game_time_utc)||beijingDate(game.gameTimeUTC)!==beijingDate(row.game_time_utc)||game.homeTeam.score==null||game.awayTeam.score==null||!Number.isInteger(game.homeTeam.score)||!Number.isInteger(game.awayTeam.score)||game.homeTeam.score===game.awayTeam.score||game.homeTeam.score<0||game.awayTeam.score<0)continue;
    row.result_json=JSON.stringify({winnerTeamId:game.homeTeam.score>game.awayTeam.score?row.home_team_id:row.away_team_id,homeScore:game.homeTeam.score,awayScore:game.awayTeam.score,settledAt:new Date(now()).toISOString()});
    statements.push(query('UPDATE account_predictions SET result_json=? WHERE user_id=? AND game_id=? AND result_json IS NULL',row.result_json,row.user_id,row.game_id));
   }

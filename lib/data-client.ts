@@ -38,16 +38,30 @@ async function liveDataset(resource: string, id: string): Promise<Envelope> {
   validateBoxscore(d.game, id);
   return { game: d.game, ...source, url: `https://www.nba.com/game/${id}/box-score` };
 }
-export async function fetchStaticDataset(resource: string, season: string, id = ''): Promise<Envelope> {
+export async function fetchStaticDataset(resource: string, season: string, id = '', allowLive = true): Promise<Envelope> {
   const path = staticDataPath(resource, season, id);
   const live = ['scoreboard', 'schedule', 'boxscore'].includes(resource);
-  if (live) {
+  if (live&&allowLive) {
     try { return await liveDataset(resource, id); } catch { /* Browser CORS and upstream restrictions must not break the static app. */ }
   }
   const raw = await json(path);
   const result = resource==='shots'||(!CURRENT_SEASONS.includes(season)&&['players','teams','standings','bpm'].includes(resource))?raw[resource]:raw;
   if (!result || typeof result !== 'object' || (!Array.isArray(result.rows) && !Array.isArray(result.games) && !result.game)) throw Error('数据快照格式异常');
   return live ? { ...result, stale: true, warning: '未能直连 NBA 官方数据，正在显示最近一次定时快照。' } : result;
+}
+function verified(value:any,resource:string,season:string,id:string):Envelope{
+  if (!value||typeof value!=='object'||(!Array.isArray(value.rows)&&!Array.isArray(value.games)&&!value.game)) throw Error('实时数据格式异常');
+  if (['players','teams','standings','bpm','shots','roster'].includes(resource)&&value.season&&value.season!==season) throw Error('实时数据赛季不匹配');
+  if(resource==='boxscore')validateBoxscore(value.game,id);
+  return value;
+}
+async function mirrorDataset(resource:string,season:string,id:string):Promise<Envelope>{
+  const file=['scoreboard','schedule'].includes(resource)?resource:resource==='boxscore'?`boxscore-${id}`:`${resource}-${season}`;
+  const value=verified(await json(`https://raw.githubusercontent.com/Cx300-fh/NBA/main/data/live/${file}.json?minute=${Math.floor(Date.now()/60000)}`,true,6000),resource,season,id);
+  const age=Date.now()-Date.parse(value.updatedAt||'');
+  const maxAge=(resource==='shots'?45:resource==='roster'?120:20)*60000;
+  const stale=Boolean(value.stale)||!Number.isFinite(age)||age>maxAge||age< -60000||['scoreboard','schedule','boxscore'].includes(resource);
+  return {...value,stale,...(stale?{warning:value.warning||'NBA 官方定时快照'}:{})};
 }
 export async function fetchDataset(resource: string, season: string, id = ''): Promise<Envelope> {
   // Validate before contacting either service. Historical seasons remain immutable files.
@@ -56,16 +70,24 @@ export async function fetchDataset(resource: string, season: string, id = ''): P
   const q = new URLSearchParams({ resource, season, ...(id ? { id } : {}) });
   const endpoint = STATIC_PAGES ? service.apiBase : '/api/nba';
   let primary:Envelope|undefined;
+  const remember=(value:Envelope)=>{if(!primary||(Date.parse(value.updatedAt||'')||0)>=(Date.parse(primary.updatedAt||'')||0))primary=value;return value};
+  const live=['scoreboard','schedule','boxscore'].includes(resource);
+  if(!live&&season==='2026-27'&&resource!=='bpm'){
+    try{const mirror=remember(await mirrorDataset(resource,season,id));if(!mirror.stale)return mirror}catch{/* The first scheduled run may not have published a feed yet. */}
+  }
+  const fromService=async()=>{
+    const value=remember(verified(await json(endpoint+'?'+q,false,18000),resource,season,id));
+    if(value.stale)throw Error('服务正在使用快照');
+    return value;
+  };
+  try{
+    // Either a browser's NBA CDN connection or the server's live backup can win.
+    // A blocked server must not delay a working official browser connection.
+    return live?await Promise.any([liveDataset(resource,id),fromService()]):await fromService();
+  }catch{/* Retain the freshest verified result below. */}
+  if(live){try{remember(await mirrorDataset(resource,season,id))}catch{/* The saved build remains available offline. */}}
   try {
-    const value=await json(endpoint+'?'+q,false,20000);
-    if (!value||typeof value!=='object'||(!Array.isArray(value.rows)&&!Array.isArray(value.games)&&!value.game)) throw Error('实时数据格式异常');
-    if (['players','teams','standings','bpm','shots','roster'].includes(resource)&&value.season&&value.season!==season) throw Error('实时数据赛季不匹配');
-    if(resource==='boxscore')validateBoxscore(value.game,id);
-    primary=value;
-    if (!value.stale) return value;
-  } catch { /* A service outage must not prevent access to the verified offline backup. */ }
-  try {
-    const backup=await fetchStaticDataset(resource,season,id);
+    const backup=await fetchStaticDataset(resource,season,id,false);
     if (primary&&(Date.parse(primary.updatedAt||'')||0)>=(Date.parse(backup.updatedAt||'')||0)) return primary;
     // CDN access is itself live; files retain their original collection time.
     if (['scoreboard','schedule','boxscore'].includes(resource)&&!backup.stale) return backup;

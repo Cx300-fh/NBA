@@ -121,7 +121,7 @@ function GameDetail({game,notebook,onUpdate,onBack,onWatch,saved,ready,predictio
  const season=gameSeason(game.gameId,defaultSeason);
  const box=useDataset('boxscore',season,game.gameId,15000);const roster=useDataset('roster',season);
  const [teamId,setTeamId]=useState(game.awayTeam.teamId);const [selected,setSelected]=useState(0);const [tab,setTab]=useState('auto');const [q,setQ]=useState('');const now=useGameClock();
- const official=box.data.game;const updated=official&&official.gameStatus>=game.gameStatus?{...game,...official,gameTimeUTC:game.gameTimeUTC} as Game:game;
+ const official=box.data.game;const updated=official&&(official.gameStatus>game.gameStatus||official.gameStatus===game.gameStatus&&!box.data.stale)?{...game,...official,gameTimeUTC:game.gameTimeUTC} as Game:game;
  const phase=gamePhase(updated,now);const pregame=phase==='upcoming'||phase==='locked';const activeTab=tab==='auto'?(phase==='final'?'recap':'notes'):tab;
  const players:StatRow[]=useMemo(()=>official?[...(official.awayTeam?.players||[]).map((p:StatRow)=>({...p,teamId:game.awayTeam.teamId})),...(official.homeTeam?.players||[]).map((p:StatRow)=>({...p,teamId:game.homeTeam.teamId}))]:(roster.data.rows||[]).filter(p=>[game.homeTeam.teamId,game.awayTeam.teamId].includes(p.TEAM_ID)).map(p=>({personId:p.PERSON_ID,name:p.DISPLAY_FIRST_LAST,teamId:p.TEAM_ID,statistics:null})),[official,roster.data,game.homeTeam.teamId,game.awayTeam.teamId]);
  const visible=players.filter(p=>p.teamId===teamId&&p.name?.toLowerCase().includes(q.toLowerCase()));

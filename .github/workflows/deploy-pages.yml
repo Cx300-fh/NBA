@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
-    paths-ignore: ['predictions/**']
+    paths-ignore: ['predictions/**', 'data/live/**']
   workflow_dispatch:
   workflow_run:
     workflows: ['Refresh official NBA data', 'Refresh player library']
