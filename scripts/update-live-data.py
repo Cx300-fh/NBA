@@ -66,6 +66,10 @@ def box_candidates(schedule,scoreboard,clock):
    previous=games.get(game['gameId'])
    if not previous or game.get('gameStatus',0)>previous.get('gameStatus',0):games[game['gameId']]=game
  return [game for game in games.values() if game.get('gameStatus') in [2,3] or ((start:=timestamp(game.get('gameTimeUTC'))) and start<=clock)]
+def ensure_current_statistics(values):
+ fresh=[resource for resource in ['players','teams','standings'] if values.get(resource,{}).get('rows') and not values[resource].get('stale',False)]
+ if not fresh:raise RuntimeError('No current NBA player, team or standings request succeeded; retained feeds are stale, not a successful live refresh')
+ return fresh
 
 def refresh(season,output=None,workers=5,clock=None):
  if not valid_season(season):raise ValueError('Invalid NBA season')
@@ -91,7 +95,8 @@ def refresh(season,output=None,workers=5,clock=None):
   if not result.get('source'):result['source']='NBA.com'
   write(path,result);return result
  def schedule():
-  raw=json.loads(nba.get('https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json'))['leagueSchedule']
+  try:raw=json.loads(nba.get('https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json'))['leagueSchedule']
+  except Exception:raw=json.loads(nba.get('https://stats.nba.com/stats/scheduleleaguev2?LeagueID=00&Season='+season))['leagueSchedule']
   return {'games':[nba.normalize_game(game) for day in raw['gameDates'] for game in day['games']],'season':raw['seasonYear'],'source':'NBA.com','url':'https://www.nba.com/schedule','updatedAt':nba.now(),'stale':False}
  def scoreboard():return {**json.loads(nba.get('https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json'))['scoreboard'],'source':'NBA.com','url':'https://www.nba.com/games','updatedAt':nba.now(),'stale':False}
  loaders={
@@ -107,6 +112,7 @@ def refresh(season,output=None,workers=5,clock=None):
   boxes={pool.submit(collect,'boxscore',lambda gid=game['gameId']:nba.boxscore(gid),game['gameId']):game['gameId'] for game in games}
   for future in concurrent.futures.as_completed(boxes):future.result()
  print('Live feeds:',season,';',len(games),'recent games;',len(errors),'source warnings',flush=True)
+ ensure_current_statistics(values)
  return values,errors
 
 if __name__=='__main__':

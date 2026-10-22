@@ -1,20 +1,58 @@
 #!/usr/bin/env python3
 """Refresh public NBA snapshots. Standard library only; no API keys or invented rows."""
 from __future__ import annotations
-import argparse, concurrent.futures, datetime as dt, html, json, re, time, unicodedata, urllib.request
+import argparse, concurrent.futures, datetime as dt, gzip, html, json, re, time, unicodedata, urllib.request, zlib
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
+try:
+ from curl_cffi import requests as chrome_requests
+except ImportError:chrome_requests=None
 ROOT=Path(__file__).resolve().parents[1]
-HEADERS={'User-Agent':'Mozilla/5.0','Referer':'https://www.nba.com/','Origin':'https://www.nba.com','Cache-Control':'no-cache','Accept':'application/json,text/html;q=0.9,*/*;q=0.8'}
+# Match nba_api's current Chrome profile; obsolete x-nba-stats-token headers are
+# deliberately omitted. No browser session, credentials or CAPTCHA is involved.
+HEADERS={'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36','Referer':'https://www.nba.com/','Origin':'https://www.nba.com','Cache-Control':'no-cache','Pragma':'no-cache','Accept':'application/json, text/plain, */*','Accept-Language':'en-US,en;q=0.5','Sec-Ch-Ua':'"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"','Sec-Ch-Ua-Mobile':'?0','Sec-Fetch-Dest':'empty'}
+OFFICIAL_STATS_HOSTS=('stats.nba.com','stats.wnba.com','stats.gleague.nba.com')
 KEEP={'PLAYER_ID','PLAYER_NAME','TEAM_ID','TEAM_ABBREVIATION','TEAM_NAME','GP','W','L','W_PCT','MIN','FGM','FGA','FG_PCT','FG3M','FG3A','FG3_PCT','FTM','FTA','FT_PCT','OREB','DREB','REB','AST','TOV','STL','BLK','PF','PTS','PLUS_MINUS','OFF_RATING','DEF_RATING','NET_RATING','AST_PCT','AST_TO','OREB_PCT','DREB_PCT','REB_PCT','TM_TOV_PCT','EFG_PCT','TS_PCT','USG_PCT','PACE','PIE'}
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
+def validate_stats_response(url,text):
+ """Official sibling hosts must explicitly confirm the requested NBA league/season."""
+ location=urlsplit(url)
+ if location.hostname not in OFFICIAL_STATS_HOSTS:return text
+ requested=parse_qs(location.query);data=json.loads(text);actual=data.get('parameters',{})
+ if location.path.rstrip('/').endswith('/scheduleleaguev2'):
+  schedule=data.get('leagueSchedule',{})
+  actual={'LeagueID':schedule.get('leagueId'),'SeasonYear':schedule.get('seasonYear')}
+ if isinstance(actual,list):actual={key:value for item in actual if isinstance(item,dict) for key,value in item.items()}
+ if not isinstance(actual,dict):raise ValueError('NBA response parameter format changed')
+ if requested.get('LeagueID')==['00'] and str(actual.get('LeagueID')).zfill(2)!='00':raise ValueError('Official endpoint returned a different league')
+ expected=(requested.get('Season') or requested.get('SeasonYear') or [None])[0]
+ if expected and str(actual.get('Season',actual.get('SeasonYear')))!=expected:raise ValueError('Official endpoint returned a different season')
+ return text
 def get(url):
- for attempt in range(2):
+ location=urlsplit(url);official=location.hostname in OFFICIAL_STATS_HOSTS
+ candidates=[urlunsplit(location._replace(netloc=host)) for host in OFFICIAL_STATS_HOSTS] if official else [url,url]
+ failures=[]
+ for attempt,candidate in enumerate(candidates):
   try:
-   with urllib.request.urlopen(urllib.request.Request(url,headers=HEADERS),timeout=22) as r:return r.read().decode('utf-8')
-  except Exception:
-   if attempt:raise
-   time.sleep(.3)
+   if chrome_requests is not None and (official or attempt==0):
+    response=chrome_requests.get(candidate,headers=HEADERS,impersonate='chrome145',timeout=12)
+    response.raise_for_status();text=response.text
+   else:
+    with urllib.request.urlopen(urllib.request.Request(candidate,headers={**HEADERS,'Accept-Encoding':'gzip, deflate'}),timeout=12) as response:
+     body=response.read();encoding=response.headers.get('Content-Encoding','').lower()
+     if encoding=='gzip':body=gzip.decompress(body)
+     elif encoding=='deflate':body=zlib.decompress(body)
+     text=body.decode('utf-8')
+   return validate_stats_response(candidate,text)
+  except Exception as error:
+   # Report status/transport category only; network exception strings can expose
+   # machine-specific proxy details and do not help diagnose the public source.
+   status=getattr(error,'code',None);response=getattr(error,'response',None)
+   if response is not None:status=getattr(response,'status_code',status)
+   category=f'HTTP {status}' if isinstance(status,int) and status>=100 else 'timeout' if isinstance(error,TimeoutError) or status==28 else type(error).__name__
+   failures.append(f'{urlsplit(candidate).hostname}: {category}')
+   if attempt+1<len(candidates):time.sleep(.2)
+ raise OSError('Public source request failed ('+'; '.join(failures)+')') from None
 def rows(text):
  data=json.loads(text);sets=data.get('resultSets',data.get('resultSet',[]));sets=[sets] if isinstance(sets,dict) else sets
  if not sets or not isinstance(sets[0].get('headers'),list) or not isinstance(sets[0].get('rowSet'),list):raise ValueError('NBA table format changed')

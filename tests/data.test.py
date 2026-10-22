@@ -1,5 +1,6 @@
 import datetime as dt,importlib.util,json,tempfile,unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 DATA=json.loads((Path(__file__).resolve().parents[1]/'data/snapshot.json').read_text())
 spec=importlib.util.spec_from_file_location('nba_collector',Path(__file__).resolve().parents[1]/'scripts/update-data.py')
@@ -30,6 +31,21 @@ class SnapshotTests(unittest.TestCase):
    for t in ['homeTeam','awayTeam']:
     self.assertGreater(len(g[t]['players']),5);self.assertEqual(sum(p['statistics']['points'] for p in g[t]['players']),g[t]['score'])
 class CollectorSafetyTests(unittest.TestCase):
+ def test_official_sibling_domains_must_confirm_nba_league_and_requested_season(self):
+  calls=[]
+  def request(url,**kwargs):
+   calls.append(url)
+   if 'stats.nba.com/' in url:raise TimeoutError('private network details must not be used')
+   parameters={'LeagueID':'10','SeasonYear':'2026-27'} if 'stats.wnba.com/' in url else {'LeagueID':'00','SeasonYear':'2026-27'}
+   return SimpleNamespace(text=json.dumps({'parameters':parameters,'resultSets':[]}),raise_for_status=lambda:None)
+  with patch.object(collector,'chrome_requests',SimpleNamespace(get=request)),patch.object(collector.time,'sleep',lambda seconds:None):
+   result=json.loads(collector.get('https://stats.nba.com/stats/leaguestandingsv3?LeagueID=00&Season=2026-27'))
+  self.assertEqual(result['parameters']['LeagueID'],'00');self.assertEqual(len(calls),3);self.assertTrue(calls[-1].startswith('https://stats.gleague.nba.com/'))
+  with self.assertRaises(ValueError):collector.validate_stats_response('https://stats.wnba.com/stats/leaguestandingsv3?LeagueID=00&Season=2026-27',json.dumps({'parameters':{'LeagueID':'00','SeasonYear':'2025-26'}}))
+  schedule_url='https://stats.wnba.com/stats/scheduleleaguev2?LeagueID=00&Season=2026-27'
+  valid={'leagueSchedule':{'leagueId':'00','seasonYear':'2026-27','gameDates':[]}}
+  self.assertEqual(json.loads(collector.validate_stats_response(schedule_url,json.dumps(valid))),valid)
+  with self.assertRaises(ValueError):collector.validate_stats_response(schedule_url,json.dumps({'leagueSchedule':{'leagueId':'10','seasonYear':'2026-27'}}))
  def test_verified_bpm_archive_survives_a_source_outage_with_original_timestamp(self):
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);(root/'data/archive').mkdir(parents=True)
@@ -63,6 +79,10 @@ class CollectorSafetyTests(unittest.TestCase):
     collector.refresh(['2026-27','2024-25'])
    result=json.loads(target.read_text());self.assertEqual(result['seasons']['2023-24'],old['seasons']['2023-24']);self.assertEqual(rosters,['2026-27']);self.assertEqual(result['roster']['season'],'2026-27');self.assertFalse(target.with_suffix('.json.tmp').exists())
 class LiveFeedTests(unittest.TestCase):
+ def test_an_outage_of_all_primary_statistics_is_a_failed_refresh(self):
+  with self.assertRaisesRegex(RuntimeError,'No current NBA'):
+   live.ensure_current_statistics({'players':{'rows':[{'PLAYER_ID':1}],'stale':True},'teams':{'rows':[],'stale':False},'standings':{'rows':[{'TeamID':1}],'stale':True}})
+  self.assertEqual(live.ensure_current_statistics({'standings':{'rows':[{'TeamID':1}],'stale':False}}),['standings'])
  def test_feed_rejects_another_season_and_incomplete_advanced_statistics(self):
   for resource,data in [('players',{'season':'2025-26','rows':[]}),('players',{'season':'2026-27','rows':[{'PLAYER_ID':1,'PTS':20}]}),('schedule',{'season':'2026-27','games':[{'gameId':'0022500001'}]})]:
    with self.assertRaises(ValueError):live.verify(resource,data,'2026-27')
@@ -75,7 +95,9 @@ class LiveFeedTests(unittest.TestCase):
    def table(kind,season):
     if kind=='players':raise OSError('NBA unavailable')
     return {'rows':[{'TEAM_ID':2,'PTS':110,'OFF_RATING':112,'TS_PCT':.6}],'season':season,'updatedAt':'2026-10-22T12:00:00Z','stale':False}
-   def get(url):return json.dumps({'leagueSchedule':{'gameDates':[{'games':[game]}],'seasonYear':'2026-27'}} if 'scheduleLeague' in url else {'scoreboard':{'games':[game],'gameDate':'2026-10-22'}})
+   def get(url):
+    if 'scheduleLeague' in url:raise OSError('CDN blocked')
+    return json.dumps({'leagueSchedule':{'gameDates':[{'games':[game]}],'seasonYear':'2026-27','leagueId':'00'}} if 'scheduleleaguev2' in url else {'scoreboard':{'games':[game],'gameDate':'2026-10-22'}})
    def box(game_id):
     team={'score':5,'statistics':{'points':5},'players':[{'statistics':{'points':1}} for _ in range(5)]}
     return {'game':{'gameId':game_id,'gameStatus':3,'homeTeam':team,'awayTeam':team},'updatedAt':'2026-10-22T12:00:00Z','stale':False,'source':'NBA.com'}
