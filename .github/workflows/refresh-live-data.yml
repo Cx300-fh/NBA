@@ -7,9 +7,9 @@ on:
     branches: [main]
     paths:
       - scripts/update-live-data.py
-      - lib/account-server.ts
-      - app/api/nba/route.ts
       - lib/data-client.ts
+      - app/api/nba/route.ts
+      - lib/account-server.ts
       - scripts/update-data.py
       - scripts/update-archive.py
       - .github/workflows/refresh-live-data.yml
@@ -29,6 +29,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install public JSON browser transport
+        run: python -m pip install curl_cffi==0.16.3
       - name: Check feed safety and data integrity
         run: python tests/data.test.py
       - name: Refresh current-season feeds
