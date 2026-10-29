@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { staticDataPath, normalizeScheduledGame, fetchStaticDataset, fetchDataset } from '../lib/data-client.ts';
+import { staticDataPath, normalizeScheduledGame, fetchStaticDataset, fetchDataset, retainLatestDataset } from '../lib/data-client.ts';
 const realFetch = globalThis.fetch;
 test('static data files are scoped by resource, season and verified game id', () => {
   assert.equal(staticDataPath('players', '2025-26'), '/data/players-2025-26.json');
@@ -52,5 +52,47 @@ test('official browser live data can win before an unavailable server completes'
  let finish:((response:Response)=>void)|undefined;
  globalThis.fetch=async input=>String(input).startsWith('https://cdn.nba.com/')?Response.json({scoreboard:{games:[],gameDate:'2026-10-22'}}):new Promise<Response>(resolve=>{finish=resolve});
  const result=await fetchDataset('scoreboard','2026-27');assert.equal(result.stale,false);assert.equal(result.source,'NBA.com');finish?.(Response.json({games:[],stale:true}));
+});
+test('CDN failure still uses the existing live Worker without waiting for Actions',async()=>{
+ const updatedAt=new Date().toISOString();
+ globalThis.fetch=async input=>{
+  if(String(input).startsWith('https://cdn.nba.com/'))throw Error('CDN unavailable');
+  assert.ok(String(input).startsWith('/api/nba?'));
+  return Response.json({games:[],source:'ESPN',updatedAt,stale:false});
+ };
+ const result=await fetchDataset('scoreboard','2026-27');
+ assert.equal(result.source,'ESPN');assert.equal(result.stale,false);assert.equal(result.updatedAt,updatedAt);
+});
+test('both live transports down select the newest fallback and preserve its actual age',async()=>{
+ for(const newer of ['mirror','pages']){
+  const timestamp='2026-10-29T00:58:28.669164+00:00';
+  globalThis.fetch=async input=>{
+   const url=String(input);
+   if(url.startsWith('https://cdn.nba.com/')||url.startsWith('/api/nba?'))throw Error('offline');
+   const origin=url.startsWith('https://raw.githubusercontent.com/')?'mirror':'pages';
+   return Response.json({games:[],source:'NBA.com',updatedAt:origin===newer?timestamp:'2026-10-29T00:48:48.427881+00:00',stale:false});
+  };
+  const result=await fetchDataset('scoreboard','2026-27');
+  assert.equal(result.updatedAt,timestamp);assert.equal(result.stale,true);
+ }
+});
+test('an aged statistics mirror cannot bypass a healthy Worker even when its saved stale flag is false',async()=>{
+ const old=new Date(Date.now()-7*3600000).toISOString(),fresh=new Date().toISOString();
+ globalThis.fetch=async input=>Response.json({season:'2026-27',rows:[{TeamID:1}],source:'NBA.com',updatedAt:String(input).startsWith('https://raw.')?old:fresh,stale:false});
+ const result=await fetchDataset('standings','2026-27');
+ assert.equal(result.updatedAt,fresh);assert.equal(result.stale,false);
+});
+test('a successful fallback response cannot overwrite a newer visible score during an outage',()=>{
+ const previous={game:{gameId:'0022600132',gameStatus:3,homeTeam:{score:117},awayTeam:{score:129}},source:'ESPN',updatedAt:'2026-10-29T02:16:06.255Z',stale:false};
+ const incoming={game:{gameId:'0022600132',gameStatus:2,homeTeam:{score:85},awayTeam:{score:97}},source:'NBA.com',updatedAt:'2026-10-29T00:58:28.669Z',stale:true};
+ const result=retainLatestDataset(previous,incoming);
+ assert.equal(result.game?.gameStatus,3);assert.equal(result.game?.homeTeam.score,117);
+ assert.equal(result.source,'ESPN');assert.equal(result.updatedAt,previous.updatedAt);assert.equal(result.stale,true);
+ assert.equal(previous.stale,false);
+ assert.equal(retainLatestDataset(result,{...previous,updatedAt:'2026-10-29T02:17:00Z'}).stale,false);
+ assert.equal(retainLatestDataset(previous,{...incoming,updatedAt:null}).updatedAt,previous.updatedAt);
+ assert.equal(retainLatestDataset({stale:true},incoming),incoming);
+ const newer={...incoming,updatedAt:'2026-10-29T02:18:00Z'};
+ assert.equal(retainLatestDataset(previous,newer),newer);
 });
 test.after(()=>{globalThis.fetch=realFetch});

@@ -1,7 +1,8 @@
 name: Refresh live NBA feeds
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # Best-effort scheduling, not a five-minute freshness guarantee. Avoid the hour boundary.
+    - cron: '2-59/5 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
@@ -37,6 +38,32 @@ jobs:
         run: python tests/data.test.py
       - name: Refresh current-season feeds
         run: python scripts/update-live-data.py --season 2026-27
+      - name: Report actual feed freshness
+        if: always()
+        run: |
+          python - <<'PY'
+          import datetime as dt, json, os
+          from pathlib import Path
+          now = dt.datetime.now(dt.timezone.utc)
+          lines = ['## Feed freshness', '', 'Observed at ' + now.isoformat(), '',
+                   'Cron is best effort; a successful run does not mean every feed refreshed.', '',
+                   '| Feed | Collected at | Age (minutes) | Stale flag |', '|---|---|---:|---|']
+          for name in ['scoreboard', 'schedule', 'players-2026-27', 'teams-2026-27', 'standings-2026-27', 'shots-2026-27', 'roster-2026-27']:
+              try:
+                  data = json.loads(Path('data/live', name + '.json').read_text())
+                  stamp = data.get('updatedAt')
+                  age = (now - dt.datetime.fromisoformat(stamp.replace('Z', '+00:00'))).total_seconds() / 60
+                  stale = bool(data.get('stale'))
+                  limit = 45 if name.startswith('shots') else 120 if name.startswith('roster') else 20
+                  if stale or age > limit or age < -1:
+                      print(f'::warning::{name}: age={age:.1f} minutes, stale={stale}')
+                  lines.append(f'| {name} | {stamp} | {age:.1f} | {stale} |')
+              except (OSError, ValueError, TypeError, AttributeError) as error:
+                  print(f'::warning::{name}: freshness unavailable ({error})')
+                  lines.append(f'| {name} | unavailable | — | unknown |')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('\n'.join(lines) + '\n')
+          PY
       - name: Commit only live feeds
         run: |
           git config user.name 'github-actions[bot]'
