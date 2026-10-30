@@ -6,6 +6,15 @@ import service from '../data/nba-service.json' with {type:'json'};
 const CURRENT_SEASONS=['2024-25','2025-26','2026-27'];
 const RESOURCES = ['players', 'teams', 'standings', 'bpm', 'shots', 'roster', 'schedule', 'scoreboard', 'boxscore'];
 const SEASONS = [...CURRENT_SEASONS,...archiveIndex.seasons.map(s=>s.season)];
+/** Call only for the same resource/season/game. Outage snapshots must not rewind a visible result. */
+export function retainLatestDataset(previous: Envelope, incoming: Envelope): Envelope {
+  const before = Date.parse(previous.updatedAt || '');
+  const after = Date.parse(incoming.updatedAt || '');
+  if (incoming.stale && Number.isFinite(before) && (!Number.isFinite(after) || before > after)) {
+    return { ...previous, stale: true, warning: '实时服务暂不可用，已保留最近一次数据。', attemptedAt: incoming.attemptedAt };
+  }
+  return incoming;
+}
 export function staticDataPath(resource: string, season: string, id = '') {
   if (!RESOURCES.includes(resource) || !SEASONS.includes(season) || (resource === 'boxscore' && !/^00\d{8}$/.test(id))) throw Error('无效的数据请求');
   if (resource==='shots'||(!CURRENT_SEASONS.includes(season)&&['players','teams','standings','bpm'].includes(resource))) return assetPath(`explore/archive/season-${season}.json`);

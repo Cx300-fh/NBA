@@ -13,12 +13,13 @@ source=source.replace("from '@/lib/basketball'",`from ${JSON.stringify(pathToFil
 source=source.replace("from '@/lib/boxscore'",`from ${JSON.stringify(pathToFileURL(resolve('lib/boxscore.ts')).href)}`);
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const path=join(dir,'api.mjs');await writeFile(path,compiled);const {GET,OPTIONS}=await import(pathToFileURL(path).href);
+const savedSnapshot=JSON.parse(await readFile(new URL('../data/snapshot.json',import.meta.url),'utf8'));
 const realFetch=globalThis.fetch;let calls=0;
 const payload=(headers,rowSet,season='2025-26')=>Response.json({parameters:{LeagueID:'00',Season:season},resultSets:[{headers,rowSet}]});
 test('API rejects unknown endpoints, unsupported seasons and malformed ids before making requests',async()=>{globalThis.fetch=async()=>{throw Error('must not fetch')};for(const q of ['resource=https://evil.test','resource=players&season=2030-31','resource=boxscore&id=../../../etc/passwd'])assert.equal((await GET(new Request('https://test.invalid/api/nba?'+q))).status,400)});
 test('official base and advanced metrics merge by player id, with cache preventing repeated upstream work',async()=>{globalThis.fetch=async url=>{calls++;if(String(url).includes('MeasureType=Advanced'))return payload(['PLAYER_ID','TS_PCT','OFF_RATING','FGM','FGA'],[[2,.63,118,500,1000],[1,.58,111,600,1200]]);return payload(['PLAYER_ID','PLAYER_NAME','TEAM_ID','PTS','GP','FGM','FGA'],[[1,'One',1610612747,21,40,8,16],[2,'Two',1610612744,29,42,11,20]])};const req=()=>new Request('https://test.invalid/api/nba?resource=players&season=2025-26');const data=await(await GET(req())).json();assert.equal(data.stale,false);assert.equal(data.rows[0].PTS,21);assert.equal(data.rows[0].FGM,8);assert.equal(data.rows[0].FGA,16);assert.equal(data.rows[0].TS_PCT,.58);assert.equal(data.rows[1].TS_PCT,.63);assert.equal(data.source,'NBA.com');const n=calls;await GET(req());assert.equal(calls,n)});
 test('NBA outages retain verified snapshots and label them stale',async()=>{globalThis.fetch=async()=>{throw Error('upstream offline')};const data=await(await GET(new Request('https://test.invalid/api/nba?resource=standings&season=2024-25'))).json();assert.equal(data.stale,true);assert.equal(data.rows.length,30);assert.ok(data.updatedAt);assert.ok(data.warning)});
-test('BPM denied by its source never becomes fabricated zeroes',async()=>{globalThis.fetch=async()=>new Response('Forbidden',{status:403});const data=await(await GET(new Request('https://test.invalid/api/nba?resource=bpm&season=2026-27'))).json();assert.equal(data.stale,true);assert.deepEqual(data.rows,[]);assert.equal(data.updatedAt,null);assert.equal(data.source,'Basketball Reference')});
+test('BPM denied by its source never becomes fabricated zeroes',async()=>{globalThis.fetch=async()=>new Response('Forbidden',{status:403});const data=await(await GET(new Request('https://test.invalid/api/nba?resource=bpm&season=2026-27'))).json();assert.equal(data.stale,true);assert.deepEqual(data.rows,savedSnapshot.seasons['2026-27'].bpm.rows);assert.equal(data.updatedAt,savedSnapshot.seasons['2026-27'].bpm.updatedAt);assert.equal(data.source,'Basketball Reference')});
 test('Pages can read the data service while unrelated origins and write preflights are rejected',async()=>{
  globalThis.fetch=async()=>{throw Error('must not fetch')};
  const url='https://courtside-nba-cx300.pastelsong512.chatgpt.site/api/nba';
@@ -79,7 +80,7 @@ test('remote NBA mirrors keep their collection time and clearly label game snaps
   const games=[fixture,{...fixture,gameId:'0032600001',homeTeam:{teamId:0}},{...fixture,gameStatus:0},{...fixture,awayTeam:fixture.homeTeam},{...fixture,gameTimeUTC:'TBD'}];
   globalThis.fetch=async url=>String(url).endsWith('/schedule.json')?Response.json({games,source:'NBA.com',season:'2026',updatedAt,stale:false}):new Response('Forbidden',{status:403});
   const data=await(await GET(new Request('https://test.invalid/api/nba?resource=schedule&season=2026-27'))).json();
-  assert.equal(data.stale,true);assert.equal(data.updatedAt,updatedAt);assert.equal(data.refreshIntervalSeconds,300);assert.ok(data.warning.includes('5 分钟'));assert.equal(data.games[0].gameId,'0022601010');assert.equal(data.games.length,1);
+  assert.equal(data.stale,true);assert.equal(data.updatedAt,updatedAt);assert.equal(data.refreshIntervalSeconds,300);assert.ok(data.warning.includes('计划每 5 分钟尝试'));assert.ok(data.warning.includes('updatedAt'));assert.equal(data.games[0].gameId,'0022601010');assert.equal(data.games.length,1);
  }finally{Date.now=originalNow}
 });
 test('mirrors reject future timestamps, untrusted sources and all-placeholder schedules',async()=>{

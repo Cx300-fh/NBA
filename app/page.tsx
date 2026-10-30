@@ -4,7 +4,7 @@ import {ArrowUpRight,ArrowRight,ArrowLeft,ChevronLeft,ChevronRight,ChevronDown,S
 import rawSeed from '@/data/snapshot.json';
 import {TEAMS,SEASONS,METRICS,DIMENSIONS,headshot,logo,formatStat,beijingDate,shiftDate,noteKey,hasObservation,type Envelope,type StatRow,type Game,type Observation} from '@/lib/basketball';
 import {STORAGE_KEY,parseNotebook,exportNotebook,type Notebook} from '@/lib/notebook';
-import {fetchDataset} from '@/lib/data-client';
+import {fetchDataset,retainLatestDataset} from '@/lib/data-client';
 import {mergeGameFeeds,gameSeason} from '@/lib/game-updates';
 import {assetPath,STATIC_PAGES} from '@/lib/site-mode';
 import {usePredictions} from '@/lib/use-predictions';
@@ -23,7 +23,7 @@ const requests=new Map<string,Promise<Envelope>>();
 function getSeed(resource:string,season:string,id=''):Envelope{return (resource==='boxscore'?seed.boxes[id]:['players','teams','standings','bpm'].includes(resource)?seed.seasons[season]?.[resource]:seed[resource])||{rows:[],stale:true};}
 function useDataset(resource:string,season=defaultSeason,id='',interval=120000){
  const key=`${resource}:${season}:${id}`;const [result,setResult]=useState<{key:string;data:Envelope}>(()=>({key,data:getSeed(resource,season,id)}));const [loading,setLoading]=useState(false);const mounted=useRef(true);const latest=useRef(key);latest.current=key;
- const reload=useCallback(async()=>{setLoading(true);let task=requests.get(key);if(!task){task=fetchDataset(resource,season,id).finally(()=>requests.delete(key));requests.set(key,task);}try{const data=await task;if(mounted.current&&latest.current===key)setResult({key,data});}catch{if(mounted.current&&latest.current===key)setResult(prev=>({key,data:{...(prev.key===key?prev.data:getSeed(resource,season,id)),stale:true,warning:'网络暂不可用，已保留最近一次数据。'}}));}finally{if(mounted.current&&latest.current===key)setLoading(false);}},[key,resource,season,id]);
+ const reload=useCallback(async()=>{setLoading(true);let task=requests.get(key);if(!task){task=fetchDataset(resource,season,id).finally(()=>requests.delete(key));requests.set(key,task);}try{const data=await task;if(mounted.current&&latest.current===key)setResult(prev=>({key,data:retainLatestDataset(prev.key===key?prev.data:getSeed(resource,season,id),data)}));}catch{if(mounted.current&&latest.current===key)setResult(prev=>({key,data:{...(prev.key===key?prev.data:getSeed(resource,season,id)),stale:true,warning:'网络暂不可用，已保留最近一次数据。'}}));}finally{if(mounted.current&&latest.current===key)setLoading(false);}},[key,resource,season,id]);
  useEffect(()=>{mounted.current=true;reload();const resume=()=>{if(document.visibilityState==='visible')reload()};const timer=setInterval(resume,interval);window.addEventListener('focus',resume);window.addEventListener('online',resume);document.addEventListener('visibilitychange',resume);return()=>{mounted.current=false;clearInterval(timer);window.removeEventListener('focus',resume);window.removeEventListener('online',resume);document.removeEventListener('visibilitychange',resume)}},[reload,interval]);
  return {data:result.key===key?result.data:getSeed(resource,season,id),loading,reload};
 }

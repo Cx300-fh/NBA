@@ -68,7 +68,7 @@ async function mirrored(resource:string,season:string,id:string):Promise<Envelop
  const gameResource=LIVE_RESOURCES.has(resource)||resource==='schedule';
  const maxAge=resource==='shots'?2700000:resource==='roster'?7200000:1200000;
  const stale=gameResource||Boolean(value.stale)||Date.now()-Date.parse(value.updatedAt)>maxAge;
- return {...value,stale,...(gameResource?{warning:'官方比赛快照，每 5 分钟更新。',refreshIntervalSeconds:300}:stale?{warning:value.warning||'官方数据镜像等待更新。'}:{})};
+ return {...value,stale,...(gameResource?{warning:'官方比赛快照；计划每 5 分钟尝试更新，实际采集时间见 updatedAt。',refreshIntervalSeconds:300}:stale?{warning:value.warning||'官方数据镜像等待更新。'}:{})};
 }
 async function espnScoreboard(season:string):Promise<Envelope>{
  const [data,schedule]=await Promise.all([remote(ESPN_SCOREBOARD),getCached('schedule',season,'')]);

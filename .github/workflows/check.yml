@@ -24,6 +24,8 @@ jobs:
         run: pnpm exec tsc --noEmit
       - name: Check notebook and dates
         run: pnpm test
+      - name: Check live-data failover
+        run: node --experimental-strip-types --test tests/pages-data.test.ts
       - name: Check official snapshots
         run: |
           python tests/data.test.py

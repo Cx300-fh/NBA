@@ -624,3 +624,44 @@ html,body{font-family:var(--font-ui);-webkit-font-smoothing:antialiased;text-ren
 .picks-scoreline>div>span{white-space:nowrap}
 @media(max-width:850px){.predictions-page .picks-heading{padding-top:18px}}
 @media(max-width:560px){.predictions-page .picks-heading{padding-top:17px}}
+
+/* Readable data surfaces: retain the editorial palette without microtype. */
+.app-shell:not(.home-shell) .nav-tab{font-size:13px}
+.subnav>button,.library-subnav>button,.profile-tabs>button{font-size:13px}
+.data-table th,.data-table th button{font-size:11px;color:#a8afba}
+.data-table td,.player-detail-page .data-table td{font-size:13px;color:#c3c8d1;height:56px}
+.data-table .rank-col{font-size:12px;color:#969eaa}
+.data-table .highlight-stat{color:var(--white)}
+.table-identity strong{font-size:13px}.table-identity small{font-size:11px;color:#a0a6b2}
+.source-line,.subnav-end .source-line,.picks-data-status{font-size:11px;color:#a8afba}
+.source-line{white-space:normal;line-height:1.6}.source-line>span:nth-child(2){overflow-wrap:anywhere}
+.subnav-end .source-line{max-width:420px}.source-line a,.source-line button{flex-shrink:0}
+.empty-state p{font-size:13px;color:#a8afba}.empty-state h3{font-size:18px}
+.library-page .filter-select,.player-detail-page .filter-select,.draft-filter{font-size:12px}
+.player-card-info>span{font-size:11px;color:#a8afba}
+.picks-subnav>button{font-size:13px}.picks-scoreline>div>span,.picks-file a{font-size:12px;color:#a8afba}
+.ticket-top>span,.ticket-bottom>span,.pick-game-top>.text-button{font-size:12px}
+.picks-datebar>span{display:inline;font-size:11px;color:#a8afba}
+.picks-data-status{font-variant-numeric:tabular-nums}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--orange);outline-offset:4px}
+.account-password:focus-within{outline:2px solid var(--orange);outline-offset:3px}
+@media(max-width:850px){
+ .app-shell:not(.home-shell) .site-header .nav-tab{font-size:12px}
+ .data-table th,.data-table th button{font-size:10px}
+ .data-table td,.player-detail-page .data-table td{font-size:12px}
+ .subnav-end .source-line{max-width:260px}
+ .picks-scoreline{gap:18px}.picks-scoreline>div>span{font-size:11px}
+}
+@media(max-width:560px){
+ .app-shell:not(.home-shell) .site-header .main-nav{gap:22px}
+ .subnav>button,.library-subnav>button,.profile-tabs>button,.picks-subnav>button{font-size:12px}
+ .picks-datebar{flex-wrap:wrap;padding-block:5px;gap:5px}
+ .picks-datebar input{width:140px}.picks-datebar>span{font-size:10px}
+ .picks-data-status{font-size:10px;gap:4px}
+ .picks-datebar>.text-button{margin-left:auto}
+ .picks-scoreline{gap:14px}.picks-scoreline .picks-file{margin-left:0}
+ .player-card-info>span{font-size:10px}
+ .library-controls>div>.filter-select{font-size:11px;min-width:0;max-width:40%}
+ .draft-filter input{font-size:12px;width:62px}
+ .subnav-end .source-line{font-size:10px;max-width:200px}
+}
