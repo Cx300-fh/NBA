@@ -17,7 +17,8 @@ function fixture(){
  return {sqlite,db,game,call,register,setTime:v=>time=v,setSchedule:v=>schedule=v};
 }
 test('accounts use salted scrypt hashes and opaque revocable sessions, never plaintext passwords',async()=>{
- const f=fixture();const account=await f.register('Basti');assert.equal(account.user.username,'Basti');assert.equal(account.token.length,43);assert.equal(account.user.password_hash,undefined);
+ const f=fixture();const health=await f.call('health?schedule=1');assert.equal(health.status,200);assert.equal(health.data.scheduleReady,true);assert.equal(health.data.scheduleGames,1);
+ const account=await f.register('Basti');assert.equal(account.user.username,'Basti');assert.equal(account.token.length,43);assert.equal(account.user.password_hash,undefined);
  const row=f.sqlite.prepare('SELECT * FROM accounts').get();assert.notEqual(row.password_hash,password);assert.ok(await passwordMatches(password,row.password_hash));assert.equal(await passwordMatches('not-the-password',row.password_hash),false);
  const session=f.sqlite.prepare('SELECT * FROM account_sessions').get();assert.notEqual(session.token_hash,account.token);assert.equal(session.token_hash.length,64);
  assert.equal((await f.call('session',{token:account.token})).status,200);assert.equal((await f.call('logout',{token:account.token,body:{}})).status,200);assert.equal((await f.call('session',{token:account.token})).status,401);
@@ -54,7 +55,7 @@ test('a blocked NBA connection accepts a recently verified same-season schedule 
  const now=Date.parse('2026-10-22T16:00:00Z');
  const game={gameId:'0022600001',gameStatus:1,gameStatusText:'7:00 PM ET',gameTimeUTC:'2026-10-23T00:00:00Z',homeTeam:{teamId:1610612747,score:0},awayTeam:{teamId:1610612744,score:0}};
  const mirror={source:'NBA.com',season:'2026-27',stale:true,updatedAt:new Date(now-8*3600000).toISOString(),games:[game]};
- const calls=[];const fetcher=async(url,options)=>{calls.push(String(url));assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');return String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json(mirror)};
+ const calls=[];const fetcher=async(url,options)=>{calls.push(String(url));assert.equal(options.cache,'no-store');if(String(url).includes('raw.githubusercontent.com'))assert.equal(options.redirect,'follow');else assert.equal(options.redirect,'error');return String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json(mirror)};
  const games=await officialSchedule(true,{now:()=>now,fetcher});assert.equal(games[0].gameId,game.gameId);assert.equal(games[0].gameTimeUTC,game.gameTimeUTC);assert.deepEqual(calls,['https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json','https://stats.wnba.com/stats/scheduleleaguev2?LeagueID=00&Season=2026-27','https://stats.gleague.nba.com/stats/scheduleleaguev2?LeagueID=00&Season=2026-27','https://raw.githubusercontent.com/Cx300-fh/NBA/main/data/live/schedule.json']);
  for(const patch of [{updatedAt:new Date(now-24*3600000-1).toISOString()},{updatedAt:new Date(now+60001).toISOString()},{source:'Unknown'},{season:'2025-26'},{games:[{...game,gameId:'0022500001'}]},{games:[{...game,gameTimeUTC:'2025-10-23T00:00:00Z'}]},{games:[game,game]},{games:[{...game,homeTeam:{teamId:1610612747,score:-1}}]}]){
   const failure=async url=>String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json({...mirror,...patch});

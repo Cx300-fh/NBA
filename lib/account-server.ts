@@ -92,7 +92,9 @@ export async function officialSchedule(fresh=false,options:{now?:()=>number;fetc
   if(!verified)throw Error('NBA赛程暂不可用');games=verified;
  }catch{
   try{
-   const r=await fetcher(SCHEDULE_MIRROR,{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'error'});
+   // raw.githubusercontent.com may redirect to GitHub's immutable object CDN.
+   // Follow that redirect, then validate every field before trusting the data.
+   const r=await fetcher(SCHEDULE_MIRROR,{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'follow'});
    if(!r.ok)throw Error('赛程备份暂不可用');
    const data=await r.json() as any,updated=Date.parse(data.updatedAt||'');
    if(data.source!=='NBA.com'||!Number.isFinite(updated)||updated>now()+60000||now()-updated>SCHEDULE_MAX_AGE)throw Error('赛程备份已过期');
@@ -156,7 +158,11 @@ export function createAccountHandler(db:D1Database|undefined,options:{now?:()=>n
    if(origin&&!headers['Access-Control-Allow-Origin'])throw new ApiError(403,'不允许的来源');
    if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
    const path=url.pathname.split('/api/account/')[1]?.replace(/\/$/,'')||'';
-   if(path==='health'&&request.method==='GET'){if(!db)return json({ready:false,version:1},503);await query('SELECT id FROM accounts LIMIT 1').all();return json({ready:true,version:1})}
+   if(path==='health'&&request.method==='GET'){
+    if(!db)return json({ready:false,version:2},503);await query('SELECT id FROM accounts LIMIT 1').all();
+    if(url.searchParams.get('schedule')==='1'){const games=await schedule(true);return json({ready:true,scheduleReady:true,scheduleGames:games.length,version:2})}
+    return json({ready:true,version:2});
+   }
    const ip=sha(request.headers.get('CF-Connecting-IP')||'unknown');
    if(['register','login'].includes(path)&&request.method==='POST'){
     await rate('auth-ip:'+ip,30,15*60000);const b=await body(request);const {username,key}=normalizedUsername(b.username);
