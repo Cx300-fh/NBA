@@ -49,7 +49,12 @@ async function body(request:Request){
 }
 let scheduleMemo:{games:Game[];until:number}|undefined;
 const SCHEDULE_MIRROR='https://raw.githubusercontent.com/Cx300-fh/NBA/main/data/live/schedule.json';
-const SCHEDULE_MAX_AGE=15*60000;
+// A season schedule is reference data, not a live score feed. GitHub Actions
+// cron runs are best effort and can be delayed for hours, so a 15-minute
+// cutoff made otherwise valid picks fail whenever the official NBA hosts were
+// blocked from the Worker. Keep a bounded window for schedule changes while
+// relying on the server clock and game status to close picks at tipoff.
+const SCHEDULE_MAX_AGE=24*60*60000;
 function seasonAt(time:string){const date=new Date(time);if(!Number.isFinite(date.getTime()))return '';const year=date.getUTCFullYear()-(date.getUTCMonth()<6?1:0);return `${year}-${String((year+1)%100).padStart(2,'0')}`;}
 function verifiedSchedule(games:unknown,season:string):Game[]{
  if(!Array.isArray(games)||!games.length||season!==SEASONS[0])throw Error('赛程格式不正确');
@@ -90,7 +95,7 @@ export async function officialSchedule(fresh=false,options:{now?:()=>number;fetc
    const r=await fetcher(SCHEDULE_MIRROR,{signal:AbortSignal.timeout(5000),cache:'no-store',redirect:'error'});
    if(!r.ok)throw Error('赛程备份暂不可用');
    const data=await r.json() as any,updated=Date.parse(data.updatedAt||'');
-   if(data.source!=='NBA.com'||data.stale!==false||!Number.isFinite(updated)||updated>now()+60000||now()-updated>SCHEDULE_MAX_AGE)throw Error('赛程备份已过期');
+   if(data.source!=='NBA.com'||!Number.isFinite(updated)||updated>now()+60000||now()-updated>SCHEDULE_MAX_AGE)throw Error('赛程备份已过期');
    games=verifiedSchedule(data.games,data.season);verifiedUntil=Math.min(verifiedUntil,updated+SCHEDULE_MAX_AGE);
   }catch{throw new ApiError(503,'赛程核对暂不可用，请稍后重试')}
  }

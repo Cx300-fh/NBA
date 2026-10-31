@@ -50,13 +50,13 @@ test('updating a pick preserves creation time; final scores settle only a matchi
  f.game.gameStatus=3;f.game.homeTeam.score=103;f.game.awayTeam.score=110;f.setTime(Date.parse('2090-10-21T03:00:00Z'));
  const ended=await f.call('predictions?month=2090-10',{token:a.token});assert.equal(ended.data.file.predictions[0].result.winnerTeamId,f.game.awayTeam.teamId);assert.equal((await submit(f.game.homeTeam.teamId)).status,409);
 });
-test('a blocked NBA connection uses only a fresh same-season trusted schedule mirror',async()=>{
+test('a blocked NBA connection accepts a recently verified same-season schedule mirror',async()=>{
  const now=Date.parse('2026-10-22T16:00:00Z');
  const game={gameId:'0022600001',gameStatus:1,gameStatusText:'7:00 PM ET',gameTimeUTC:'2026-10-23T00:00:00Z',homeTeam:{teamId:1610612747,score:0},awayTeam:{teamId:1610612744,score:0}};
- const mirror={source:'NBA.com',season:'2026-27',stale:false,updatedAt:new Date(now-60000).toISOString(),games:[game]};
+ const mirror={source:'NBA.com',season:'2026-27',stale:true,updatedAt:new Date(now-8*3600000).toISOString(),games:[game]};
  const calls=[];const fetcher=async(url,options)=>{calls.push(String(url));assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');return String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json(mirror)};
  const games=await officialSchedule(true,{now:()=>now,fetcher});assert.equal(games[0].gameId,game.gameId);assert.equal(games[0].gameTimeUTC,game.gameTimeUTC);assert.deepEqual(calls,['https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json','https://stats.wnba.com/stats/scheduleleaguev2?LeagueID=00&Season=2026-27','https://stats.gleague.nba.com/stats/scheduleleaguev2?LeagueID=00&Season=2026-27','https://raw.githubusercontent.com/Cx300-fh/NBA/main/data/live/schedule.json']);
- for(const patch of [{stale:true},{updatedAt:new Date(now-15*60000-1).toISOString()},{updatedAt:new Date(now+60001).toISOString()},{source:'Unknown'},{season:'2025-26'},{games:[{...game,gameId:'0022500001'}]},{games:[{...game,gameTimeUTC:'2025-10-23T00:00:00Z'}]},{games:[game,game]},{games:[{...game,homeTeam:{teamId:1610612747,score:-1}}]}]){
+ for(const patch of [{updatedAt:new Date(now-24*3600000-1).toISOString()},{updatedAt:new Date(now+60001).toISOString()},{source:'Unknown'},{season:'2025-26'},{games:[{...game,gameId:'0022500001'}]},{games:[{...game,gameTimeUTC:'2025-10-23T00:00:00Z'}]},{games:[game,game]},{games:[{...game,homeTeam:{teamId:1610612747,score:-1}}]}]){
   const failure=async url=>String(url).startsWith('https://cdn.nba.com/')?new Response('Forbidden',{status:403}):Response.json({...mirror,...patch});
   await assert.rejects(officialSchedule(true,{now:()=>now,fetcher:failure}),error=>error.status===503);
  }
