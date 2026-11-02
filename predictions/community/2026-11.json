@@ -1,7 +1,7 @@
 {
   "version": 2,
   "month": "2026-11",
-  "updatedAt": "2026-11-01T01:30:57.949Z",
+  "updatedAt": "2026-11-02T05:58:50.698Z",
   "predictions": [
     {
       "participantId": "54d56ecf-cce5-419c-96e3-af3d7b799d5a",
@@ -11,7 +11,13 @@
       "awayTeamId": 1610612751,
       "pickedTeamId": 1610612754,
       "createdAt": "2026-11-01T01:30:57.949Z",
-      "updatedAt": "2026-11-01T01:30:57.949Z"
+      "updatedAt": "2026-11-01T01:30:57.949Z",
+      "result": {
+        "winnerTeamId": 1610612751,
+        "homeScore": 90,
+        "awayScore": 98,
+        "settledAt": "2026-11-02T05:58:50.698Z"
+      }
     }
   ]
 }
