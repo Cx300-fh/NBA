@@ -1,7 +1,7 @@
 {
   "version": 2,
   "month": "2026-11",
-  "updatedAt": "2026-11-02T08:31:15.725Z",
+  "updatedAt": "2026-11-03T14:10:45.376Z",
   "predictions": [
     {
       "participantId": "54d56ecf-cce5-419c-96e3-af3d7b799d5a",
@@ -27,7 +27,13 @@
       "awayTeamId": 1610612760,
       "pickedTeamId": 1610612739,
       "createdAt": "2026-11-02T08:30:56.552Z",
-      "updatedAt": "2026-11-02T08:30:56.552Z"
+      "updatedAt": "2026-11-02T08:30:56.552Z",
+      "result": {
+        "winnerTeamId": 1610612760,
+        "homeScore": 112,
+        "awayScore": 117,
+        "settledAt": "2026-11-03T14:10:45.376Z"
+      }
     },
     {
       "participantId": "54d56ecf-cce5-419c-96e3-af3d7b799d5a",
@@ -37,7 +43,13 @@
       "awayTeamId": 1610612738,
       "pickedTeamId": 1610612738,
       "createdAt": "2026-11-02T08:31:15.725Z",
-      "updatedAt": "2026-11-02T08:31:15.725Z"
+      "updatedAt": "2026-11-02T08:31:15.725Z",
+      "result": {
+        "winnerTeamId": 1610612745,
+        "homeScore": 109,
+        "awayScore": 93,
+        "settledAt": "2026-11-03T14:10:45.376Z"
+      }
     },
     {
       "participantId": "54d56ecf-cce5-419c-96e3-af3d7b799d5a",
@@ -47,7 +59,13 @@
       "awayTeamId": 1610612762,
       "pickedTeamId": 1610612759,
       "createdAt": "2026-11-02T08:30:45.606Z",
-      "updatedAt": "2026-11-02T08:30:45.606Z"
+      "updatedAt": "2026-11-02T08:30:45.606Z",
+      "result": {
+        "winnerTeamId": 1610612759,
+        "homeScore": 119,
+        "awayScore": 97,
+        "settledAt": "2026-11-03T14:10:45.376Z"
+      }
     }
   ]
 }
